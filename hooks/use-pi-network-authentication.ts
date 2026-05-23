@@ -1,6 +1,6 @@
-// LOCKED FILE
+// LOCKED FILE - Version corrigée
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { PI_NETWORK_CONFIG, BACKEND_URLS } from "@/lib/system-config";
 
 interface PiAuthResult {
@@ -58,10 +58,8 @@ function parseJsonSafely(value: any): any {
 const loadPiSDK = (): Promise<void> => {
   return new Promise((resolve, reject) => {
     const script = document.createElement("script");
-    if (!PI_NETWORK_CONFIG.SDK_URL) {
-      throw new Error("SDK URL is not set");
-    }
-    script.src = PI_NETWORK_CONFIG.SDK_URL;
+    const sdkUrl = PI_NETWORK_CONFIG?.SDK_URL || "https://sdk.minepi.com/pi-sdk.js";
+    script.src = sdkUrl;
     script.async = true;
 
     script.onload = () => {
@@ -148,13 +146,15 @@ function requestParentCredentials(): Promise<{ accessToken: string; appId: strin
 }
 
 async function loginWithBackend(accessToken: string, appId: string | null): Promise<void> {
+  const loginUrl = BACKEND_URLS?.LOGIN_PREVIEW || BACKEND_URLS?.LOGIN || "/api/auth/login";
   let endpoint: string;
   let payload: { pi_auth_token: string; app_id?: string };
+  
   if (appId) {
-    endpoint = BACKEND_URLS.LOGIN_PREVIEW;
+    endpoint = BACKEND_URLS?.LOGIN_PREVIEW || `${loginUrl}/preview`;
     payload = { pi_auth_token: accessToken, app_id: appId };
   } else {
-    endpoint = BACKEND_URLS.LOGIN;
+    endpoint = BACKEND_URLS?.LOGIN || loginUrl;
     payload = { pi_auth_token: accessToken };
   }
 
@@ -166,7 +166,8 @@ async function loginWithBackend(accessToken: string, appId: string | null): Prom
     });
 
     if (!response.ok) {
-      throw new Error(DEFAULT_ERROR_MESSAGE);
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || DEFAULT_ERROR_MESSAGE);
     }
   } catch (error) {
     throw new Error(DEFAULT_ERROR_MESSAGE);
@@ -178,13 +179,20 @@ export const usePiNetworkAuthentication = () => {
   const [authMessage, setAuthMessage] = useState("Initializing Pi Network...");
   const [piAccessToken, setPiAccessToken] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const authAttempted = useRef(false);
 
   const authenticateViaPiSdk = async (): Promise<void> => {
     setAuthMessage("Initializing Pi Network...");
-    await window.Pi.init({ version: '2.0', sandbox: PI_NETWORK_CONFIG.SANDBOX });
+    
+    if (!window.Pi) {
+      throw new Error("Pi SDK not available");
+    }
+    
+    await window.Pi.init({ version: '2.0', sandbox: PI_NETWORK_CONFIG?.SANDBOX ?? true });
 
     setAuthMessage("Authenticating Pi Network...");
-    const scopes = ['username', 'roles', 'payments'];
+    const scopes = ['username', 'wallet_address', 'payments'];
     const piAuthResult = await window.Pi.authenticate(scopes);
 
     if (!piAuthResult.accessToken) {
@@ -196,8 +204,13 @@ export const usePiNetworkAuthentication = () => {
     setPiAccessToken(piAuthResult.accessToken);
   };
 
-  const initializePiAndAuthenticate = async () => {
+  const initializePiAndAuthenticate = useCallback(async () => {
+    if (authAttempted.current) return;
+    authAttempted.current = true;
+    
     setError(null);
+    setIsLoading(true);
+    
     try {
       // Probe for parent credentials (App Studio iframe environment)
       const parentCredentials = await requestParentCredentials();
@@ -222,23 +235,45 @@ export const usePiNetworkAuthentication = () => {
 
       // Success
       setIsAuthenticated(true);
+      setAuthMessage("Connected to Pi Network");
     } catch (err) {
       console.error("❌ Pi Network initialization failed:", err);
       const errorMessage = err instanceof Error && err.message ? err.message : DEFAULT_ERROR_MESSAGE;
       setAuthMessage(errorMessage);
       setError(errorMessage);
+      setIsAuthenticated(false);
+    } finally {
+      setIsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     initializePiAndAuthenticate();
-  }, []);
+  }, [initializePiAndAuthenticate]);
+
+  // Fonction pour réinitialiser l'authentification
+  const reinitialize = useCallback(() => {
+    authAttempted.current = false;
+    setIsAuthenticated(false);
+    setPiAccessToken(null);
+    setError(null);
+    setAuthMessage("Initializing Pi Network...");
+    initializePiAndAuthenticate();
+  }, [initializePiAndAuthenticate]);
+
+  // Fonction pour obtenir le token (utile pour les appels API)
+  const getAccessToken = useCallback(() => piAccessToken, [piAccessToken]);
+
+  // Vérifier si l'utilisateur est authentifié et a un token valide
+  const isAuthenticatedAndReady = isAuthenticated && !!piAccessToken;
 
   return {
-    isAuthenticated,
+    isAuthenticated: isAuthenticatedAndReady,
+    isAuthenticating: isLoading,
     authMessage,
     piAccessToken,
     error,
-    reinitialize: initializePiAndAuthenticate,
+    reinitialize,
+    getAccessToken,
   };
 };
