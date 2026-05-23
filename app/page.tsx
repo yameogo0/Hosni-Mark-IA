@@ -1,7 +1,7 @@
 'use client'
 
 import type React from "react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -47,9 +47,15 @@ export default function ChatBot() {
   const { bottomRef } = useScrollToBottom([messages])
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false)
   const [isPiSDKReady, setIsPiSDKReady] = useState(false)
+  const [mounted, setMounted] = useState(false)
   const { toast } = useToast()
   
   const { isAuthenticated: isPiAuthenticated, user: piUser, login: piLogin } = usePiWallet()
+
+  // Gestion du montage pour éviter les erreurs d'hydratation
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
     const checkPiSDK = () => {
@@ -70,7 +76,7 @@ export default function ChatBot() {
     return () => clearInterval(interval)
   }, [])
 
-  const handleSubscribeClick = async () => {
+  const handleSubscribeClick = useCallback(async () => {
     if (!isPiAuthenticated) {
       toast({
         title: "Wallet requis",
@@ -79,17 +85,17 @@ export default function ChatBot() {
       return
     }
     setIsPaymentModalOpen(true)
-  }
+  }, [isPiAuthenticated, toast])
 
-  const handlePaymentSuccess = () => {
+  const handlePaymentSuccess = useCallback(() => {
     toast({
       title: "🎉 Abonnement activé!",
       description: "Vous avez maintenant accès à toutes les fonctionnalités premium.",
     })
     setTimeout(() => window.location.reload(), 1500)
-  }
+  }, [toast])
 
-  const hasPremiumAccess = () => {
+  const hasPremiumAccess = useCallback(() => {
     if (typeof window === 'undefined') return false
     const saved = localStorage.getItem('hinos_subscription')
     if (saved) {
@@ -101,9 +107,15 @@ export default function ChatBot() {
       }
     }
     return subscriptionStatus?.canAskQuestion || false
-  }
+  }, [subscriptionStatus?.canAskQuestion])
 
   const isPremium = hasPremiumAccess()
+  const isFirstMessage = messages.length === 1 && messages[0].id === "1"
+
+  // Évite les erreurs d'hydratation
+  if (!mounted) {
+    return null
+  }
 
   if (!isAuthenticated) {
     return (
@@ -142,8 +154,6 @@ export default function ChatBot() {
     )
   }
 
-  const isFirstMessage = messages.length === 1 && messages[0].id === "1"
-
   return (
     <div className="flex items-center justify-center min-h-screen p-4" style={{ backgroundColor: COLORS.BACKGROUND }}>
       <Card className="w-full max-w-2xl h-[700px] flex flex-col shadow-2xl border-primary/20">
@@ -173,9 +183,9 @@ export default function ChatBot() {
           </CardTitle>
         </CardHeader>
 
-        <CardContent className="flex-1 overflow-y-auto p-4 space-y-4">
+        <CardContent className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-custom">
           {isFirstMessage && (
-            <div className="space-y-4">
+            <div className="space-y-4 animate-fade-in">
               <SubscriptionStatusIndicator status={subscriptionStatus} />
               <WelcomeMessage />
               <SubscriptionBanner onSubscribeClick={handleSubscribeClick} />
@@ -194,7 +204,7 @@ export default function ChatBot() {
             return (
               <div
                 key={message.id}
-                className={`flex gap-3 ${message.sender === "user" ? "flex-row-reverse" : "flex-row"}`}
+                className={`flex gap-3 ${message.sender === "user" ? "flex-row-reverse" : "flex-row"} animate-slide-up`}
               >
                 <div
                   className={`w-8 h-8 rounded-full flex items-center justify-center text-white flex-shrink-0 shadow-md`}
