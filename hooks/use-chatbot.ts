@@ -8,7 +8,7 @@ import { APP_CONFIG } from "@/lib/app-config";
 import { BACKEND_URLS } from "@/lib/system-config";
 
 // Types pour le multilingue
-type Language = 'fr' | 'en' | 'pt';
+export type Language = 'fr' | 'en' | 'pt';
 
 // Messages multilingues
 const MESSAGES = {
@@ -42,7 +42,7 @@ const MESSAGES = {
 };
 
 // Détection de la langue
-const detectLanguage = (text: string): Language => {
+export const detectLanguage = (text: string): Language => {
   const textLower = text.toLowerCase();
   
   const portugueseKeywords = ['obrigado', 'obrigada', 'por favor', 'oi', 'olá', 'tudo bem', 'como vai', 'obg', 'bom dia', 'boa tarde', 'boa noite', 'legal', 'amigo'];
@@ -57,7 +57,7 @@ const detectLanguage = (text: string): Language => {
 };
 
 // Helper function to create messages
-const createMessage = (
+export const createMessage = (
   text: Message["text"],
   sender: Message["sender"],
   id?: Message["id"],
@@ -266,7 +266,7 @@ export const useChatbot = () => {
   };
 };
 
-// Hook pour le sélecteur de langue
+// Hook pour le sélecteur de langue (sans JSX)
 export const useLanguageSelector = () => {
   const [language, setLanguage] = useState<Language>('fr');
   
@@ -283,38 +283,4 @@ export const useLanguageSelector = () => {
   }, []);
   
   return { language, changeLanguage };
-};
-
-// Composant LanguageSelector (optionnel)
-export const LanguageSelectorComponent = ({ 
-  currentLang, 
-  onLanguageChange 
-}: { 
-  currentLang: string; 
-  onLanguageChange: (lang: Language) => void;
-}) => {
-  const languages = [
-    { code: 'fr' as Language, label: 'Français', flag: '🇫🇷' },
-    { code: 'en' as Language, label: 'English', flag: '🇬🇧' },
-    { code: 'pt' as Language, label: 'Português', flag: '🇵🇹' }
-  ];
-
-  return (
-    <div className="flex gap-1">
-      {languages.map((lang) => (
-        <button
-          key={lang.code}
-          onClick={() => onLanguageChange(lang.code)}
-          className={`px-2 py-1 text-xs rounded-md transition-all ${
-            currentLang === lang.code
-              ? 'bg-primary text-white shadow-sm'
-              : 'bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700'
-          }`}
-        >
-          <span className="mr-1">{lang.flag}</span>
-          {lang.label}
-        </button>
-      ))}
-    </div>
-  );
 };
