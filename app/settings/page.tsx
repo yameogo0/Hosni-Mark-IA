@@ -1,4 +1,3 @@
-[collez le code de settings/page.tsx]
 "use client"
 
 import { PiWalletManager } from "@/components/PiWalletManager"
@@ -16,7 +15,6 @@ export default function SettingsPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 p-4">
       <div className="max-w-4xl mx-auto space-y-6">
-        {/* Header */}
         <div className="flex items-center gap-4">
           <Button variant="outline" size="sm" onClick={() => router.push("/")} className="shadow-sm">
             <ArrowLeft className="w-4 h-4 mr-2" />
@@ -30,7 +28,6 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* Tabs */}
         <div className="flex gap-2 border-b pb-2">
           <button
             onClick={() => setActiveTab('wallet')}
@@ -61,7 +58,6 @@ export default function SettingsPage() {
           </button>
         </div>
 
-        {/* Content */}
         {activeTab === 'wallet' && <PiWalletManager />}
         
         {activeTab === 'subscription' && (

@@ -1,4 +1,3 @@
-[collez le code de PiScriptLoader]
 'use client'
 
 import { useEffect, useState } from 'react'
