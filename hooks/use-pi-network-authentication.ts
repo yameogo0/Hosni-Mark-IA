@@ -3,6 +3,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { PI_NETWORK_CONFIG, BACKEND_URLS } from "@/lib/system-config";
 
+// 🔥 MODE DÉMO FORCÉ - Mettre à true pour éviter l'attente
+const FORCE_DEMO_MODE = true;
+
 interface PiAuthResult {
   accessToken: string;
   user: {
@@ -27,18 +30,15 @@ function isInIframe(): boolean {
   try {
     return window.self !== window.top;
   } catch (error) {
-    // Cross-origin access may throw when in an iframe
     if (
       error instanceof DOMException &&
       (error.name === 'SecurityError' || error.code === DOMException.SECURITY_ERR || error.code === 18)
     ) {
       return true;
     }
-    // Firefox may throw generic Permission denied errors
     if (error instanceof Error && /Permission denied/i.test(error.message)) {
       return true;
     }
-
     throw error;
   }
 }
@@ -54,7 +54,6 @@ function parseJsonSafely(value: any): any {
   return typeof value === 'object' && value !== null ? value : null;
 }
 
-// Function to dynamically load Pi SDK script
 const loadPiSDK = (): Promise<void> => {
   return new Promise((resolve, reject) => {
     const script = document.createElement("script");
@@ -76,14 +75,7 @@ const loadPiSDK = (): Promise<void> => {
   });
 };
 
-/**
- * Requests authentication credentials from the parent window (App Studio) via postMessage.
- * Returns null if not in iframe, timeout, or missing token (non-fatal check).
- *
- * @returns {Promise<{accessToken: string, appId: string}|null>} Resolves with credentials or null
- */
 function requestParentCredentials(): Promise<{ accessToken: string; appId: string | null } | null> {
-  // Early return if not in an iframe
   if (!isInIframe()) {
     return Promise.resolve(null);
   }
@@ -94,7 +86,6 @@ function requestParentCredentials(): Promise<{ accessToken: string; appId: strin
   return new Promise((resolve) => {
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
-    // Cleanup function to remove listener and clear timeout
     const cleanup = (listener: (event: MessageEvent) => void) => {
       window.removeEventListener('message', listener);
       if (timeoutId !== null) {
@@ -103,12 +94,10 @@ function requestParentCredentials(): Promise<{ accessToken: string; appId: strin
     };
 
     const messageListener = (event: MessageEvent) => {
-      // Security: only accept messages from parent window
       if (event.source !== window.parent) {
         return;
       }
 
-      // Validate message type and request ID match
       const data = parseJsonSafely(event.data);
       if (!data || data.type !== COMMUNICATION_REQUEST_TYPE || data.id !== requestId) {
         return;
@@ -116,25 +105,19 @@ function requestParentCredentials(): Promise<{ accessToken: string; appId: strin
 
       cleanup(messageListener);
 
-      // Extract credentials from response payload
       const payload = typeof data.payload === 'object' && data.payload !== null ? data.payload : {};
       const accessToken = typeof payload.accessToken === 'string' ? payload.accessToken : null;
       const appId = typeof payload.appId === 'string' ? payload.appId : null;
 
-      // Return credentials or null if missing token
       resolve(accessToken ? { accessToken, appId } : null);
     };
 
-    // Set timeout handler (resolve with null on timeout)
     timeoutId = setTimeout(() => {
       cleanup(messageListener);
       resolve(null);
     }, timeoutMs);
 
-    // Register listener before sending request
     window.addEventListener('message', messageListener);
-
-    // Send request to parent window to get credentials
     window.parent.postMessage(
       JSON.stringify({
         type: COMMUNICATION_REQUEST_TYPE,
@@ -211,21 +194,29 @@ export const usePiNetworkAuthentication = () => {
     setError(null);
     setIsLoading(true);
     
+    // 🔥 MODE DÉMO FORCÉ - Connexion instantanée
+    if (FORCE_DEMO_MODE) {
+      console.log("🏖️ Mode démo - Authentification automatique");
+      setTimeout(() => {
+        setPiAccessToken("demo_token_" + Date.now());
+        setIsAuthenticated(true);
+        setAuthMessage("✅ Connecté (mode démo)");
+        setIsLoading(false);
+      }, 500);
+      return;
+    }
+    
     try {
-      // Probe for parent credentials (App Studio iframe environment)
       const parentCredentials = await requestParentCredentials();
 
-      // If parent (App Studio) provides credentials, use iframe flow
       if (parentCredentials) {
         setPiAccessToken(parentCredentials.accessToken);
         setAuthMessage("Logging in...");
         await loginWithBackend(parentCredentials.accessToken, parentCredentials.appId);
       } else {
-        // Fallback to Pi SDK authentication
         setAuthMessage("Loading Pi Network SDK...");
         await loadPiSDK();
 
-        // Verify Pi object is available
         if (typeof window.Pi === "undefined") {
           throw new Error("Pi object not available after script load");
         }
@@ -233,7 +224,6 @@ export const usePiNetworkAuthentication = () => {
         await authenticateViaPiSdk();
       }
 
-      // Success
       setIsAuthenticated(true);
       setAuthMessage("Connected to Pi Network");
     } catch (err) {
@@ -251,7 +241,6 @@ export const usePiNetworkAuthentication = () => {
     initializePiAndAuthenticate();
   }, [initializePiAndAuthenticate]);
 
-  // Fonction pour réinitialiser l'authentification
   const reinitialize = useCallback(() => {
     authAttempted.current = false;
     setIsAuthenticated(false);
@@ -261,10 +250,8 @@ export const usePiNetworkAuthentication = () => {
     initializePiAndAuthenticate();
   }, [initializePiAndAuthenticate]);
 
-  // Fonction pour obtenir le token (utile pour les appels API)
   const getAccessToken = useCallback(() => piAccessToken, [piAccessToken]);
 
-  // Vérifier si l'utilisateur est authentifié et a un token valide
   const isAuthenticatedAndReady = isAuthenticated && !!piAccessToken;
 
   return {
