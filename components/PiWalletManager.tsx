@@ -1,4 +1,3 @@
-[collez le code de PiWalletManager]
 'use client'
 
 import React, { useState, useEffect } from 'react'
@@ -71,7 +70,6 @@ export function PiWalletManager() {
           console.log('✅ Wallet Pi connecté:', walletData.username)
         }
       } else {
-        // Mode démo
         const demoUser: WalletUser = {
           uid: 'demo_' + Date.now(),
           username: 'demo_user_' + Math.floor(Math.random() * 1000),
@@ -163,6 +161,16 @@ export function PiWalletManager() {
                 {copied ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4 text-gray-600" />}
               </button>
             )}
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3 text-sm">
+          <div className="bg-white rounded-lg p-3 border border-green-200">
+            <p className="text-xs text-gray-500">ID Utilisateur</p>
+            <p className="font-mono text-xs truncate">{user?.uid}</p>
+          </div>
+          <div className="bg-white rounded-lg p-3 border border-green-200">
+            <p className="text-xs text-gray-500">État</p>
+            <p className="font-semibold text-green-600">✓ Connecté</p>
           </div>
         </div>
         <div className="bg-green-50 rounded-lg p-2 text-center text-xs text-green-700 border border-green-200">
