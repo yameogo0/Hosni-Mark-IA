@@ -1,23 +1,73 @@
 'use client';
 
 import React from "react"
-
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import type { Message } from "@/lib/types";
 import { usePiNetworkAuthentication } from "./use-pi-network-authentication";
 import { APP_CONFIG } from "@/lib/app-config";
 import { BACKEND_URLS } from "@/lib/system-config";
 
+// Types pour le multilingue
+type Language = 'fr' | 'en' | 'pt';
+
+// Messages multilingues
+const MESSAGES = {
+  fr: {
+    thinking: "Réflexion en cours...",
+    thinkingWithCount: "Réflexion en cours... ({count})",
+    noResponse: "Aucune réponse reçue du serveur.",
+    errorBackend: "Erreur de connexion au serveur.",
+    imageUploaded: "Image téléchargée",
+    dailyLimit: "Limite quotidienne atteinte. Veuillez réessayer demain.",
+    tooManyRequests: "Trop de requêtes. Veuillez réessayer plus tard."
+  },
+  en: {
+    thinking: "Thinking...",
+    thinkingWithCount: "Thinking... ({count})",
+    noResponse: "No response received from server.",
+    errorBackend: "Error connecting to server.",
+    imageUploaded: "Image uploaded",
+    dailyLimit: "Daily limit reached. Please try again tomorrow.",
+    tooManyRequests: "Too many requests. Please try again later."
+  },
+  pt: {
+    thinking: "Pensando...",
+    thinkingWithCount: "Pensando... ({count})",
+    noResponse: "Nenhuma resposta recebida do servidor.",
+    errorBackend: "Erro ao conectar ao servidor.",
+    imageUploaded: "Imagem enviada",
+    dailyLimit: "Limite diário atingido. Tente novamente amanhã.",
+    tooManyRequests: "Muitas solicitações. Tente novamente mais tarde."
+  }
+};
+
+// Détection de la langue
+const detectLanguage = (text: string): Language => {
+  const textLower = text.toLowerCase();
+  
+  const portugueseKeywords = ['obrigado', 'obrigada', 'por favor', 'oi', 'olá', 'tudo bem', 'como vai', 'obg', 'bom dia', 'boa tarde', 'boa noite', 'legal', 'amigo'];
+  const englishKeywords = ['hello', 'hi', 'thank you', 'please', 'good morning', 'good afternoon', 'good evening', 'how are you', 'thanks', 'hey'];
+  const frenchKeywords = ['bonjour', 'merci', 's\'il vous plaît', 'stp', 'svp', 'salut', 'coucou', 'bonsoir', 'comment ça va', 'ça va'];
+  
+  for (const word of portugueseKeywords) if (textLower.includes(word)) return 'pt';
+  for (const word of englishKeywords) if (textLower.includes(word)) return 'en';
+  for (const word of frenchKeywords) if (textLower.includes(word)) return 'fr';
+  
+  return 'fr';
+};
+
 // Helper function to create messages
 const createMessage = (
   text: Message["text"],
   sender: Message["sender"],
-  id?: Message["id"]
+  id?: Message["id"],
+  language?: Language
 ): Message => ({
   id: id || Date.now().toString(),
   text,
   sender,
   timestamp: new Date(),
+  language: language || 'fr',
 });
 
 export const useChatbot = () => {
@@ -30,10 +80,32 @@ export const useChatbot = () => {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [selectedImage, setSelectedImage] = useState<{ file: File; preview: string } | null>(null);
+  const [currentLanguage, setCurrentLanguage] = useState<Language>('fr');
+  const [detectedLanguage, setDetectedLanguage] = useState<Language>('fr');
   const thinkingTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const showThinking = () => {
-    const thinkingMessage = createMessage("Thinking... (0)", "ai", "thinking");
+  // Détecter la langue à partir de l'input
+  const detectAndSetLanguage = useCallback((text: string) => {
+    const detected = detectLanguage(text);
+    setDetectedLanguage(detected);
+    if (detected !== currentLanguage) {
+      setCurrentLanguage(detected);
+    }
+    return detected;
+  }, [currentLanguage]);
+
+  // Obtenir le message dans la bonne langue
+  const getLocalizedMessage = useCallback((key: keyof typeof MESSAGES.fr, count?: number): string => {
+    const messages = MESSAGES[currentLanguage];
+    if (key === 'thinkingWithCount' && count !== undefined) {
+      return messages.thinkingWithCount.replace('{count}', count.toString());
+    }
+    return messages[key] || MESSAGES.fr[key];
+  }, [currentLanguage]);
+
+  const showThinking = useCallback(() => {
+    const thinkingText = getLocalizedMessage('thinking');
+    const thinkingMessage = createMessage(thinkingText, "ai", "thinking", currentLanguage);
     setMessages((prev) => [...prev, thinkingMessage]);
 
     let seconds = 0;
@@ -42,26 +114,31 @@ export const useChatbot = () => {
       setMessages((prevMessages) =>
         prevMessages.map((msg) =>
           msg.id === "thinking"
-            ? { ...msg, text: `Thinking... (${seconds})` }
+            ? { ...msg, text: getLocalizedMessage('thinkingWithCount', seconds) }
             : msg
         )
       );
     }, 1000);
-  };
+  }, [getLocalizedMessage, currentLanguage]);
 
-  const hideThinking = () => {
+  const hideThinking = useCallback(() => {
     if (thinkingTimerRef.current) {
       clearInterval(thinkingTimerRef.current);
       thinkingTimerRef.current = null;
     }
     setMessages((prev) => prev.filter((msg) => msg.id !== "thinking"));
-  };
+  }, []);
 
-  const sendMessage = async () => {
+  const sendMessage = useCallback(async () => {
     if (!isAuthenticated || !piAccessToken || (!input.trim() && !selectedImage)) return;
 
-    const userMessageText = input.trim() || (selectedImage ? "[Image uploaded]" : "");
-    const userMessage = createMessage(userMessageText, "user");
+    const userMessageText = input.trim() || (selectedImage ? getLocalizedMessage('imageUploaded') : "");
+    
+    // Détecter la langue du message utilisateur
+    const userLanguage = detectLanguage(userMessageText);
+    setCurrentLanguage(userLanguage);
+    
+    const userMessage = createMessage(userMessageText, "user", undefined, userLanguage);
     setMessages((prev) => [...prev, userMessage]);
     
     const currentImage = selectedImage;
@@ -72,13 +149,13 @@ export const useChatbot = () => {
     showThinking();
 
     try {
-      // Prepare request body
-      const requestBody: any = { message: userMessage.text };
+      // Préparer la requête avec la langue
+      const requestBody: any = { 
+        message: userMessage.text,
+        language: userLanguage
+      };
       
-      // If there's an image, convert to base64 and include it
       if (currentImage) {
-        // In production, you would send this to a vision API endpoint
-        // For now, we'll include it in the request
         requestBody.image = currentImage.preview;
         requestBody.hasImage = true;
       }
@@ -96,12 +173,10 @@ export const useChatbot = () => {
 
       if (response.status === 429) {
         const errorData = await response.json();
-        const errorMessage = createMessage(
-          errorData.error_type === "daily_limit_exceeded"
-            ? errorData.error
-            : "Too many requests. Please try again later.",
-          "ai"
-        );
+        const errorMsg = errorData.error_type === "daily_limit_exceeded"
+          ? getLocalizedMessage('dailyLimit')
+          : getLocalizedMessage('tooManyRequests');
+        const errorMessage = createMessage(errorMsg, "ai", undefined, userLanguage);
         setMessages((prev) => [...prev, errorMessage]);
         return;
       }
@@ -109,47 +184,57 @@ export const useChatbot = () => {
       const data = await response.json();
 
       if (data.messages && Array.isArray(data.messages)) {
-        const aiMsg = data.messages
-          .reverse()
-          .find((m: any) => m.sender === "ai");
+        const aiMsg = data.messages.reverse().find((m: any) => m.sender === "ai");
         const botMessage = createMessage(
-          aiMsg ? aiMsg.text : "No AI response received.",
-          "ai"
+          aiMsg ? aiMsg.text : getLocalizedMessage('noResponse'),
+          "ai",
+          undefined,
+          userLanguage
         );
         setMessages((prev) => [...prev, botMessage]);
       } else {
-        const errorMessage = createMessage("No response from backend.", "ai");
+        const errorMessage = createMessage(getLocalizedMessage('noResponse'), "ai", undefined, userLanguage);
         setMessages((prev) => [...prev, errorMessage]);
       }
     } catch (error) {
       hideThinking();
-      const errorMessage = createMessage("Error contacting backend.", "ai");
+      const errorMessage = createMessage(getLocalizedMessage('errorBackend'), "ai", undefined, currentLanguage);
       setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [isAuthenticated, piAccessToken, input, selectedImage, getLocalizedMessage, showThinking, hideThinking, currentLanguage]);
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
     }
-  };
+  }, [sendMessage]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setInput(e.target.value);
-  };
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    setInput(newValue);
+    if (newValue.trim()) {
+      detectAndSetLanguage(newValue);
+    }
+  }, [detectAndSetLanguage]);
 
-  const handleImageSelect = (file: File, preview: string) => {
+  const handleImageSelect = useCallback((file: File, preview: string) => {
     setSelectedImage({ file, preview });
-  };
+  }, []);
 
-  const handleImageRemove = () => {
+  const handleImageRemove = useCallback(() => {
     setSelectedImage(null);
-  };
+  }, []);
 
-  // Cleanup function
+  // Changer manuellement la langue
+  const changeLanguage = useCallback((lang: Language) => {
+    setCurrentLanguage(lang);
+    setDetectedLanguage(lang);
+  }, []);
+
+  // Nettoyage
   useEffect(() => {
     return () => {
       if (thinkingTimerRef.current) {
@@ -168,6 +253,8 @@ export const useChatbot = () => {
     error,
     selectedImage,
     piAccessToken,
+    currentLanguage,
+    detectedLanguage,
 
     // Actions
     sendMessage,
@@ -175,5 +262,59 @@ export const useChatbot = () => {
     handleInputChange,
     handleImageSelect,
     handleImageRemove,
+    changeLanguage,
   };
+};
+
+// Hook pour le sélecteur de langue
+export const useLanguageSelector = () => {
+  const [language, setLanguage] = useState<Language>('fr');
+  
+  const changeLanguage = (lang: Language) => {
+    setLanguage(lang);
+    localStorage.setItem('hosni_ia_language', lang);
+  };
+  
+  useEffect(() => {
+    const saved = localStorage.getItem('hosni_ia_language') as Language;
+    if (saved && ['fr', 'en', 'pt'].includes(saved)) {
+      setLanguage(saved);
+    }
+  }, []);
+  
+  return { language, changeLanguage };
+};
+
+// Composant LanguageSelector (optionnel)
+export const LanguageSelectorComponent = ({ 
+  currentLang, 
+  onLanguageChange 
+}: { 
+  currentLang: string; 
+  onLanguageChange: (lang: Language) => void;
+}) => {
+  const languages = [
+    { code: 'fr' as Language, label: 'Français', flag: '🇫🇷' },
+    { code: 'en' as Language, label: 'English', flag: '🇬🇧' },
+    { code: 'pt' as Language, label: 'Português', flag: '🇵🇹' }
+  ];
+
+  return (
+    <div className="flex gap-1">
+      {languages.map((lang) => (
+        <button
+          key={lang.code}
+          onClick={() => onLanguageChange(lang.code)}
+          className={`px-2 py-1 text-xs rounded-md transition-all ${
+            currentLang === lang.code
+              ? 'bg-primary text-white shadow-sm'
+              : 'bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700'
+          }`}
+        >
+          <span className="mr-1">{lang.flag}</span>
+          {lang.label}
+        </button>
+      ))}
+    </div>
+  );
 };
