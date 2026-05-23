@@ -1,10 +1,9 @@
-// LOCKED FILE - Version corrigée
+// LOCKED FILE - Version corrigée (Production Ready)
+// 🔥 MODE DÉMO - Mettre à false pour la production
+const FORCE_DEMO_MODE = false;
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { PI_NETWORK_CONFIG, BACKEND_URLS } from "@/lib/system-config";
-
-// 🔥 MODE DÉMO FORCÉ - Mettre à true pour éviter l'attente
-const FORCE_DEMO_MODE = true;
 
 interface PiAuthResult {
   accessToken: string;
@@ -194,8 +193,9 @@ export const usePiNetworkAuthentication = () => {
     setError(null);
     setIsLoading(true);
     
-    // 🔥 MODE DÉMO FORCÉ - Connexion instantanée
+    // 🔥 MODE DÉMO DÉSACTIVÉ - Authentification réelle
     if (FORCE_DEMO_MODE) {
+      // Ce bloc ne s'exécutera pas car FORCE_DEMO_MODE = false
       console.log("🏖️ Mode démo - Authentification automatique");
       setTimeout(() => {
         setPiAccessToken("demo_token_" + Date.now());
@@ -206,6 +206,7 @@ export const usePiNetworkAuthentication = () => {
       return;
     }
     
+    // Authentification réelle
     try {
       const parentCredentials = await requestParentCredentials();
 
