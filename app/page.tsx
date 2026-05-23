@@ -51,7 +51,6 @@ export default function ChatBot() {
   
   const { isAuthenticated: isPiAuthenticated, user: piUser, login: piLogin } = usePiWallet()
 
-  // Vérifier le SDK Pi
   useEffect(() => {
     const checkPiSDK = () => {
       if (typeof window !== 'undefined' && window.Pi) {
@@ -72,7 +71,6 @@ export default function ChatBot() {
   }, [])
 
   const handleSubscribeClick = async () => {
-    // Vérifier si le wallet Pi est connecté
     if (!isPiAuthenticated) {
       toast({
         title: "Wallet requis",
@@ -91,8 +89,8 @@ export default function ChatBot() {
     setTimeout(() => window.location.reload(), 1500)
   }
 
-  // Vérifier si l'utilisateur a accès premium
   const hasPremiumAccess = () => {
+    if (typeof window === 'undefined') return false
     const saved = localStorage.getItem('hinos_subscription')
     if (saved) {
       try {
@@ -149,7 +147,6 @@ export default function ChatBot() {
   return (
     <div className="flex items-center justify-center min-h-screen p-4" style={{ backgroundColor: COLORS.BACKGROUND }}>
       <Card className="w-full max-w-2xl h-[700px] flex flex-col shadow-2xl border-primary/20">
-        {/* Header avec badge premium */}
         <CardHeader className="text-white rounded-t-lg" style={{ backgroundColor: COLORS.PRIMARY }}>
           <CardTitle className="text-center">
             <div className="flex items-center justify-between">
