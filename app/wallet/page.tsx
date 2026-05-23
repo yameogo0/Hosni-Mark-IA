@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -20,26 +21,57 @@ import {
   ArrowDownLeft,
   Download,
   Upload,
+  AlertCircle,
 } from "lucide-react"
 import { useWallet, type WalletData, type Transaction } from "@/hooks/use-wallet"
 import { usePiNetworkAuthentication } from "@/hooks/use-pi-network-authentication"
 import { COLORS } from "@/lib/app-config"
 import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
 export default function WalletPage() {
-  const { piAccessToken, isAuthenticated } = usePiNetworkAuthentication()
-  const { walletData, isLoading, error, refetch } = useWallet(piAccessToken)
+  const router = useRouter()
+  const { piAccessToken, isAuthenticated, isLoading: authLoading } = usePiNetworkAuthentication()
+  const { walletData, isLoading: walletLoading, error, refetch } = useWallet(piAccessToken)
   const [showBalance, setShowBalance] = useState(true)
-  const [selectedPeriod, setSelectedPeriod] = useState<"week" | "month" | "all">("month")
+
+  // Redirection si non authentifié après chargement
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      const timer = setTimeout(() => {
+        router.push("/")
+      }, 3000)
+      return () => clearTimeout(timer)
+    }
+  }, [authLoading, isAuthenticated, router])
+
+  if (authLoading || walletLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin mb-4">
+            <Wallet className="w-12 h-12 text-primary" />
+          </div>
+          <p className="text-muted-foreground">Chargement de votre wallet...</p>
+        </div>
+      </div>
+    )
+  }
 
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="max-w-md w-full">
           <CardContent className="pt-6">
+            <Alert className="mb-4 border-yellow-500 bg-yellow-50">
+              <AlertCircle className="h-4 w-4 text-yellow-600" />
+              <AlertDescription className="text-yellow-700">
+                Vous devez être connecté pour accéder au wallet.
+              </AlertDescription>
+            </Alert>
             <p className="text-center text-muted-foreground mb-4">
-              Vous devez être connecté pour accéder au wallet.
+              Redirection vers l'accueil...
             </p>
             <Link href="/">
               <Button className="w-full" style={{ backgroundColor: COLORS.PRIMARY }}>
@@ -52,11 +84,37 @@ export default function WalletPage() {
     )
   }
 
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="max-w-md w-full">
+          <CardContent className="pt-6">
+            <Alert variant="destructive" className="mb-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Erreur lors du chargement des données: {error}
+              </AlertDescription>
+            </Alert>
+            <Button onClick={() => refetch()} className="w-full" variant="outline">
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Réessayer
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
   if (!walletData) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-spin">
-          <Wallet className="w-8 h-8 text-primary" />
+        <div className="text-center">
+          <p className="text-muted-foreground">Aucune donnée wallet disponible</p>
+          <Link href="/">
+            <Button className="mt-4" variant="outline">
+              Retour à l&apos;accueil
+            </Button>
+          </Link>
         </div>
       </div>
     )
@@ -79,7 +137,7 @@ export default function WalletPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="bg-gradient-to-r from-primary to-primary/80 text-white sticky top-0 z-40">
+      <header className="bg-gradient-to-r from-primary to-primary/80 text-white sticky top-0 z-40 shadow-md">
         <div className="max-w-6xl mx-auto px-4 py-6">
           <div className="flex items-center justify-between mb-4">
             <Link href="/">
@@ -105,7 +163,7 @@ export default function WalletPage() {
             <div className="flex items-baseline justify-between">
               <div className="flex items-baseline gap-2">
                 <span className="text-5xl font-bold" style={{ color: COLORS.PRIMARY }}>
-                  {showBalance ? walletData.balance.toFixed(2) : "•••"}
+                  {showBalance ? walletData.balance.toFixed(2) : "••••••"}
                 </span>
                 <span className="text-2xl text-muted-foreground">π</span>
               </div>
@@ -113,7 +171,7 @@ export default function WalletPage() {
                 variant="ghost"
                 size="icon"
                 onClick={() => setShowBalance(!showBalance)}
-                className="text-muted-foreground"
+                className="text-muted-foreground hover:bg-white/20"
               >
                 {showBalance ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
               </Button>
@@ -152,7 +210,7 @@ export default function WalletPage() {
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <Badge style={{ backgroundColor: COLORS.PRIMARY }} className="mb-2">
+                        <Badge style={{ backgroundColor: COLORS.PRIMARY, color: "white" }} className="mb-2">
                           {walletData.subscription.plan === "weekly" ? "Hebdomadaire" : "Mensuel Pro"}
                         </Badge>
                         <p className="text-sm text-muted-foreground">
@@ -162,7 +220,7 @@ export default function WalletPage() {
                               day: "numeric",
                               month: "long",
                               year: "numeric",
-                            }).format(walletData.subscription.endDate)}
+                            }).format(new Date(walletData.subscription.endDate))}
                         </p>
                       </div>
                       <TrendingUp className="w-8 h-8 text-green-500" />
@@ -170,17 +228,10 @@ export default function WalletPage() {
                     <Separator />
                     <div className="flex gap-2">
                       <Link href="/" className="flex-1">
-                        <Button variant="outline" className="w-full bg-transparent">
+                        <Button variant="outline" className="w-full">
                           Retour au chat
                         </Button>
                       </Link>
-                      <Button
-                        variant="outline"
-                        className="text-destructive bg-transparent"
-                        // onClick to cancel subscription
-                      >
-                        Annuler
-                      </Button>
                     </div>
                   </div>
                 ) : (
@@ -188,7 +239,9 @@ export default function WalletPage() {
                     <Crown className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                     <p className="text-muted-foreground mb-4">Pas d&apos;abonnement actif</p>
                     <Link href="/">
-                      <Button style={{ backgroundColor: COLORS.PRIMARY }}>S&apos;abonner maintenant</Button>
+                      <Button style={{ backgroundColor: COLORS.PRIMARY }}>
+                        S&apos;abonner maintenant
+                      </Button>
                     </Link>
                   </div>
                 )}
@@ -224,7 +277,7 @@ export default function WalletPage() {
 
                   <TabsContent value="subscription" className="space-y-3">
                     {transactionsByType.subscription.length === 0 ? (
-                      <p className="text-sm text-muted-foreground text-center py-8">Aucune transaction</p>
+                      <p className="text-sm text-muted-foreground text-center py-8">Aucune transaction d&apos;abonnement</p>
                     ) : (
                       transactionsByType.subscription.map((tx) => <TransactionRow key={tx.id} transaction={tx} />)
                     )}
@@ -232,7 +285,7 @@ export default function WalletPage() {
 
                   <TabsContent value="image" className="space-y-3">
                     {transactionsByType.image_analysis.length === 0 ? (
-                      <p className="text-sm text-muted-foreground text-center py-8">Aucune transaction</p>
+                      <p className="text-sm text-muted-foreground text-center py-8">Aucune analyse d&apos;image</p>
                     ) : (
                       transactionsByType.image_analysis.map((tx) => <TransactionRow key={tx.id} transaction={tx} />)
                     )}
@@ -258,18 +311,20 @@ export default function WalletPage() {
                 <CardTitle className="text-base">Actions rapides</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                <Button className="w-full justify-start" variant="outline" className="bg-transparent">
+                <Button className="w-full justify-start" variant="outline">
                   <Upload className="w-4 h-4 mr-2" />
                   Dépôt Pi
                 </Button>
-                <Button className="w-full justify-start" variant="outline" className="bg-transparent">
+                <Button className="w-full justify-start" variant="outline">
                   <Download className="w-4 h-4 mr-2" />
                   Retrait Pi
                 </Button>
-                <Button className="w-full justify-start" variant="outline" className="bg-transparent">
-                  <Settings className="w-4 h-4 mr-2" />
-                  Paramètres
-                </Button>
+                <Link href="/settings" className="w-full">
+                  <Button className="w-full justify-start" variant="outline">
+                    <Settings className="w-4 h-4 mr-2" />
+                    Paramètres
+                  </Button>
+                </Link>
               </CardContent>
             </Card>
 
@@ -314,18 +369,31 @@ function TransactionRow({ transaction }: { transaction: Transaction }) {
   const getStatusColor = () => {
     switch (transaction.status) {
       case "completed":
-        return "text-green-600"
+        return "text-green-600 bg-green-50"
       case "pending":
-        return "text-yellow-600"
+        return "text-yellow-600 bg-yellow-50"
       case "failed":
-        return "text-red-600"
+        return "text-red-600 bg-red-50"
       default:
-        return "text-gray-600"
+        return "text-gray-600 bg-gray-50"
+    }
+  }
+
+  const getStatusText = () => {
+    switch (transaction.status) {
+      case "completed":
+        return "Complété"
+      case "pending":
+        return "En attente"
+      case "failed":
+        return "Échoué"
+      default:
+        return transaction.status
     }
   }
 
   return (
-    <div className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent transition-colors">
+    <div className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
       <div className="flex items-center gap-3">
         <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
           {getIcon()}
@@ -338,18 +406,14 @@ function TransactionRow({ transaction }: { transaction: Transaction }) {
               month: "short",
               hour: "2-digit",
               minute: "2-digit",
-            }).format(transaction.timestamp)}
+            }).format(new Date(transaction.timestamp))}
           </p>
         </div>
       </div>
       <div className="text-right">
-        <p className="text-sm font-semibold">-{transaction.amount} π</p>
+        <p className="text-sm font-semibold text-red-600">-{transaction.amount.toFixed(2)} π</p>
         <Badge variant="outline" className={`text-xs ${getStatusColor()}`}>
-          {transaction.status === "completed"
-            ? "Complété"
-            : transaction.status === "pending"
-              ? "En attente"
-              : "Échoué"}
+          {getStatusText()}
         </Badge>
       </div>
     </div>
