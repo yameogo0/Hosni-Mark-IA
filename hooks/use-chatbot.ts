@@ -5,7 +5,6 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import type { Message } from "@/lib/types";
 import { usePiNetworkAuthentication } from "./use-pi-network-authentication";
 import { APP_CONFIG } from "@/lib/app-config";
-import { BACKEND_URLS } from "@/lib/system-config";
 
 // Types pour le multilingue
 export type Language = 'fr' | 'en' | 'pt';
@@ -160,11 +159,10 @@ export const useChatbot = () => {
         requestBody.hasImage = true;
       }
 
-      const response = await fetch(BACKEND_URLS.CHAT, {
+      const response = await fetch("/api/chat", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: piAccessToken,
         },
         body: JSON.stringify(requestBody),
       });
@@ -183,10 +181,10 @@ export const useChatbot = () => {
 
       const data = await response.json();
 
-      if (data.messages && Array.isArray(data.messages)) {
-        const aiMsg = data.messages.reverse().find((m: any) => m.sender === "ai");
+      // ✅ CORRECTION : L'API renvoie data.response directement
+      if (data.response) {
         const botMessage = createMessage(
-          aiMsg ? aiMsg.text : getLocalizedMessage('noResponse'),
+          data.response,
           "ai",
           undefined,
           userLanguage
