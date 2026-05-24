@@ -6,8 +6,6 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  // Ignorer les avertissements de sécurité (temporaire)
-  swcMinify: true,
 }
 
 export default nextConfig

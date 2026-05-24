@@ -1,6 +1,5 @@
 {
   "buildCommand": "npm run build",
   "installCommand": "npm install --force --legacy-peer-deps",
-  "framework": "nextjs",
-  "ignoreCommand": "echo 'Ignoring vulnerabilities for deployment'"
+  "framework": "nextjs"
 }
