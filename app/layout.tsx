@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { APP_CONFIG } from "@/lib/app-config";
 import "./globals.css";
@@ -7,7 +6,7 @@ const inter = Inter({ subsets: ["latin"] });
 
 const appName = APP_CONFIG.NAME || "Hosni IA";
 
-export const metadata: Metadata = {
+export const metadata = {
   title: `${appName} - Expert Marketing & Commerce IA`,
   description: "Hosni IA - Votre expert en marketing et commerce 24/7",
   generator: 'v0.app'
