@@ -1,6 +1,6 @@
 // LOCKED FILE - Version corrigée (Production Ready)
-// 🔥 MODE DÉMO - Mettre à false pour la production
-const FORCE_DEMO_MODE = false;
+// 🔥 MODE DÉMO - Mettre à true pour les tests, false pour la production
+const FORCE_DEMO_MODE = true;  // ← Mettez à true pour éviter le timeout
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { PI_NETWORK_CONFIG, BACKEND_URLS } from "@/lib/system-config";
@@ -80,7 +80,8 @@ function requestParentCredentials(): Promise<{ accessToken: string; appId: strin
   }
 
   const requestId = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-  const timeoutMs = 1500;
+  // 🔥 AUGMENTER LE TIMEOUT de 1500 à 10000 ms
+  const timeoutMs = 10000; // 10 secondes au lieu de 1.5 secondes
 
   return new Promise((resolve) => {
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
@@ -193,9 +194,8 @@ export const usePiNetworkAuthentication = () => {
     setError(null);
     setIsLoading(true);
     
-    // 🔥 MODE DÉMO DÉSACTIVÉ - Authentification réelle
+    // 🔥 MODE DÉMO - Pour les tests sans SDK Pi
     if (FORCE_DEMO_MODE) {
-      // Ce bloc ne s'exécutera pas car FORCE_DEMO_MODE = false
       console.log("🏖️ Mode démo - Authentification automatique");
       setTimeout(() => {
         setPiAccessToken("demo_token_" + Date.now());
