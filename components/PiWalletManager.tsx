@@ -20,6 +20,9 @@ interface WalletUser {
   accessToken?: string
 }
 
+// 🔥 FORCER LE MODE DÉMO
+const FORCE_DEMO_MODE = true
+
 export function PiWalletManager() {
   const [isConnected, setIsConnected] = useState(false)
   const [user, setUser] = useState<WalletUser | null>(null)
@@ -53,33 +56,20 @@ export function PiWalletManager() {
     
     setIsRefreshing(true)
     try {
-      // Appel API pour récupérer le vrai solde
-      const response = await fetch('/api/pi/balance', {
-        headers: {
-          'Authorization': `Bearer ${user.accessToken}`
-        }
-      })
-      if (response.ok) {
-        const data = await response.json()
-        setBalance(data.balance)
-        // Mettre à jour localStorage
-        const updated = { ...user, balance: data.balance }
-        setUser(updated)
-        localStorage.setItem('pi_wallet_user', JSON.stringify(updated))
-        toast({
-          title: "Solde actualisé",
-          description: `Nouveau solde: ${data.balance} π`,
-        })
-      } else {
-        // Fallback: solde simulé
-        const newBalance = Math.floor(Math.random() * 90) + 10
-        setBalance(newBalance)
-      }
-    } catch (error) {
-      console.error('Erreur rafraîchissement:', error)
-      // Fallback: solde simulé
+      // Mode démo - solde simulé
       const newBalance = Math.floor(Math.random() * 90) + 10
       setBalance(newBalance)
+      if (user) {
+        const updated = { ...user, balance: newBalance }
+        setUser(updated)
+        localStorage.setItem('pi_wallet_user', JSON.stringify(updated))
+      }
+      toast({
+        title: "Solde actualisé",
+        description: `Nouveau solde: ${newBalance} π`,
+      })
+    } catch (error) {
+      console.error('Erreur rafraîchissement:', error)
     } finally {
       setIsRefreshing(false)
     }
@@ -90,6 +80,28 @@ export function PiWalletManager() {
     setError(null)
 
     try {
+      // FORCER LE MODE DÉMO
+      if (FORCE_DEMO_MODE) {
+        console.log('🏖️ Mode démo - Wallet simulé')
+        const demoUser: WalletUser = {
+          uid: 'demo_' + Date.now(),
+          username: 'demo_user_' + Math.floor(Math.random() * 1000),
+          walletAddress: '0x' + Array.from({ length: 40 }, () => Math.floor(Math.random() * 16).toString(16)).join(''),
+          balance: Math.floor(Math.random() * 90) + 10,
+          accessToken: 'demo_token_' + Date.now()
+        }
+        setUser(demoUser)
+        setIsConnected(true)
+        setBalance(demoUser.balance)
+        localStorage.setItem('pi_wallet_user', JSON.stringify(demoUser))
+        toast({
+          title: "Mode démo",
+          description: "Wallet simulé pour les tests",
+        })
+        return
+      }
+
+      // Mode réel (si jamais activé)
       if (typeof window !== 'undefined' && window.Pi && window.Pi.authenticate) {
         console.log('🔐 Authentification Pi...')
         const scopes = ['username', 'wallet_address', 'payments']
@@ -110,30 +122,11 @@ export function PiWalletManager() {
           setUser(walletData)
           setIsConnected(true)
           localStorage.setItem('pi_wallet_user', JSON.stringify(walletData))
-          console.log('✅ Wallet Pi connecté:', walletData.username)
           toast({
             title: "Wallet connecté",
             description: `Bienvenue ${walletData.username} !`,
           })
         }
-      } else {
-        // Mode démo
-        const demoUser: WalletUser = {
-          uid: 'demo_' + Date.now(),
-          username: 'demo_user_' + Math.floor(Math.random() * 1000),
-          walletAddress: '0x' + Array.from({ length: 40 }, () => Math.floor(Math.random() * 16).toString(16)).join(''),
-          balance: Math.floor(Math.random() * 90) + 10,
-          accessToken: 'demo_token_' + Date.now()
-        }
-        setUser(demoUser)
-        setIsConnected(true)
-        setBalance(demoUser.balance)
-        localStorage.setItem('pi_wallet_user', JSON.stringify(demoUser))
-        console.log('🎭 Mode démo - Wallet simulé')
-        toast({
-          title: "Mode démo",
-          description: "Wallet simulé pour les tests",
-        })
       }
     } catch (error: any) {
       console.error('❌ Erreur connexion:', error)
@@ -209,11 +202,9 @@ export function PiWalletManager() {
               </>
             )}
           </Button>
-          {process.env.NEXT_PUBLIC_PI_NETWORK_SANDBOX === 'true' && (
-            <p className="text-xs text-center text-amber-600">
-              🏖️ Mode Sandbox actif - Transactions simulées
-            </p>
-          )}
+          <p className="text-xs text-center text-amber-600">
+            🏖️ Mode démo actif - Transactions simulées
+          </p>
         </CardContent>
       </Card>
     )
@@ -249,7 +240,6 @@ export function PiWalletManager() {
       </CardHeader>
       
       <CardContent className="space-y-4">
-        {/* Solde */}
         <div className="bg-white rounded-lg p-3 border border-green-200">
           <p className="text-xs text-gray-500 mb-1">Solde disponible</p>
           <div className="flex items-baseline gap-1">
@@ -260,7 +250,6 @@ export function PiWalletManager() {
           </div>
         </div>
 
-        {/* Adresse du wallet */}
         <div className="bg-white rounded-lg p-3 border border-green-200">
           <p className="text-xs text-gray-500 mb-1">Adresse du Wallet</p>
           <div className="flex items-center gap-2">
@@ -279,7 +268,6 @@ export function PiWalletManager() {
           </div>
         </div>
 
-        {/* Informations du compte */}
         <div className="grid grid-cols-2 gap-3 text-sm">
           <div className="bg-white rounded-lg p-3 border border-green-200">
             <p className="text-xs text-gray-500">ID Utilisateur</p>
@@ -294,16 +282,10 @@ export function PiWalletManager() {
           </div>
         </div>
 
-        {/* Mode indication */}
-        <div className="bg-green-50 rounded-lg p-2 text-center text-xs text-green-700 border border-green-200">
-          {process.env.NEXT_PUBLIC_PI_NETWORK_SANDBOX === 'true' ? (
-            <>🏖️ Mode Sandbox - Transactions simulées</>
-          ) : (
-            <>🔐 Mode Production - Transactions réelles</>
-          )}
+        <div className="bg-yellow-50 rounded-lg p-2 text-center text-xs text-yellow-700 border border-yellow-200">
+          🏖️ Mode Sandbox - Transactions simulées
         </div>
 
-        {/* Bouton déconnexion */}
         <Button 
           onClick={handleDisconnect} 
           variant="destructive" 
