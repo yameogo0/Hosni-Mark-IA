@@ -26,7 +26,16 @@ export function PiScriptLoader() {
         console.log('✅ Pi SDK initialisé')
       }
     }
+    script.onerror = () => {
+      console.error('❌ Erreur chargement Pi SDK')
+    }
     document.head.appendChild(script)
+
+    return () => {
+      if (document.head.contains(script)) {
+        document.head.removeChild(script)
+      }
+    }
   }, [])
 
   return null
