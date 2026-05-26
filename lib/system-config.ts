@@ -1,8 +1,8 @@
-// Configuration Pi Network
+// Configuration Pi Network - FORCER LE MODE SANDBOX
 export const PI_NETWORK_CONFIG = {
   SDK_URL: "https://sdk.minepi.com/pi-sdk.js",
   SDK_VERSION: "2.0",
-  SANDBOX: process.env.NEXT_PUBLIC_PI_NETWORK_SANDBOX === 'true' || false,
+  SANDBOX: true,  // ← FORCÉ à true pour le mode démo
   APP_ID: process.env.NEXT_PUBLIC_PI_APP_ID || "",
   API_KEY: process.env.PI_API_KEY || "",
 } as const;
