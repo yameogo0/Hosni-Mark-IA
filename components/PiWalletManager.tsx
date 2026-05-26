@@ -20,9 +20,6 @@ interface WalletUser {
   accessToken?: string
 }
 
-// 🔥 FORCER LE MODE DÉMO
-const FORCE_DEMO_MODE = true
-
 export function PiWalletManager() {
   const [isConnected, setIsConnected] = useState(false)
   const [user, setUser] = useState<WalletUser | null>(null)
@@ -34,7 +31,6 @@ export function PiWalletManager() {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const { toast } = useToast()
 
-  // Charger les données sauvegardées
   useEffect(() => {
     const saved = localStorage.getItem('pi_wallet_user')
     if (saved) {
@@ -50,24 +46,22 @@ export function PiWalletManager() {
     }
   }, [])
 
-  // Rafraîchir le solde
   const refreshBalance = useCallback(async () => {
     if (!user?.accessToken) return
     
     setIsRefreshing(true)
     try {
-      // Mode démo - solde simulé
-      const newBalance = Math.floor(Math.random() * 90) + 10
-      setBalance(newBalance)
-      if (user) {
-        const updated = { ...user, balance: newBalance }
+      const response = await fetch('/api/pi/balance', {
+        headers: { 'Authorization': `Bearer ${user.accessToken}` }
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setBalance(data.balance)
+        const updated = { ...user, balance: data.balance }
         setUser(updated)
         localStorage.setItem('pi_wallet_user', JSON.stringify(updated))
+        toast({ title: "Solde actualisé", description: `Nouveau solde: ${data.balance} π` })
       }
-      toast({
-        title: "Solde actualisé",
-        description: `Nouveau solde: ${newBalance} π`,
-      })
     } catch (error) {
       console.error('Erreur rafraîchissement:', error)
     } finally {
@@ -80,32 +74,9 @@ export function PiWalletManager() {
     setError(null)
 
     try {
-      // FORCER LE MODE DÉMO
-      if (FORCE_DEMO_MODE) {
-        console.log('🏖️ Mode démo - Wallet simulé')
-        const demoUser: WalletUser = {
-          uid: 'demo_' + Date.now(),
-          username: 'demo_user_' + Math.floor(Math.random() * 1000),
-          walletAddress: '0x' + Array.from({ length: 40 }, () => Math.floor(Math.random() * 16).toString(16)).join(''),
-          balance: Math.floor(Math.random() * 90) + 10,
-          accessToken: 'demo_token_' + Date.now()
-        }
-        setUser(demoUser)
-        setIsConnected(true)
-        setBalance(demoUser.balance)
-        localStorage.setItem('pi_wallet_user', JSON.stringify(demoUser))
-        toast({
-          title: "Mode démo",
-          description: "Wallet simulé pour les tests",
-        })
-        return
-      }
-
-      // Mode réel (si jamais activé)
       if (typeof window !== 'undefined' && window.Pi && window.Pi.authenticate) {
         console.log('🔐 Authentification Pi...')
         const scopes = ['username', 'wallet_address', 'payments']
-
         const auth = await window.Pi.authenticate(scopes, (err: any) => {
           console.error('Erreur auth Pi:', err)
           setError(err?.message || 'Erreur d\'authentification')
@@ -122,20 +93,15 @@ export function PiWalletManager() {
           setUser(walletData)
           setIsConnected(true)
           localStorage.setItem('pi_wallet_user', JSON.stringify(walletData))
-          toast({
-            title: "Wallet connecté",
-            description: `Bienvenue ${walletData.username} !`,
-          })
+          toast({ title: "Wallet connecté", description: `Bienvenue ${walletData.username} !` })
         }
+      } else {
+        throw new Error("Pi SDK non disponible. Veuillez utiliser le Pi Browser.")
       }
     } catch (error: any) {
       console.error('❌ Erreur connexion:', error)
       setError(error.message || 'Erreur de connexion')
-      toast({
-        title: "Erreur",
-        description: error.message || "Impossible de connecter le wallet",
-        variant: "destructive",
-      })
+      toast({ title: "Erreur", description: error.message || "Impossible de connecter le wallet", variant: "destructive" })
     } finally {
       setIsLoading(false)
     }
@@ -147,25 +113,18 @@ export function PiWalletManager() {
     setBalance(null)
     setError(null)
     localStorage.removeItem('pi_wallet_user')
-    toast({
-      title: "Déconnexion",
-      description: "Wallet déconnecté avec succès",
-    })
+    toast({ title: "Déconnexion", description: "Wallet déconnecté avec succès" })
   }, [toast])
 
   const handleCopyAddress = useCallback(() => {
     if (user?.walletAddress && user.walletAddress !== 'Non disponible') {
       navigator.clipboard.writeText(user.walletAddress)
       setCopied(true)
-      toast({
-        title: "Copié !",
-        description: "Adresse du wallet copiée dans le presse-papier",
-      })
+      toast({ title: "Copié !", description: "Adresse du wallet copiée" })
       setTimeout(() => setCopied(false), 2000)
     }
   }, [user?.walletAddress, toast])
 
-  // Non connecté
   if (!isConnected) {
     return (
       <Card className="w-full bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
@@ -185,115 +144,43 @@ export function PiWalletManager() {
               {error}
             </div>
           )}
-          <Button 
-            onClick={handleConnect} 
-            disabled={isLoading} 
-            className="w-full bg-blue-600 hover:bg-blue-700 transition-all"
-          >
-            {isLoading ? (
-              <>
-                <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                Connexion...
-              </>
-            ) : (
-              <>
-                <Wallet className="w-4 h-4 mr-2" />
-                Connecter Wallet Pi
-              </>
-            )}
+          <Button onClick={handleConnect} disabled={isLoading} className="w-full bg-blue-600 hover:bg-blue-700">
+            {isLoading ? <><RefreshCw className="w-4 h-4 mr-2 animate-spin" /> Connexion...</> : <><Wallet className="w-4 h-4 mr-2" /> Connecter Wallet Pi</>}
           </Button>
-          <p className="text-xs text-center text-amber-600">
-            🏖️ Mode démo actif - Transactions simulées
-          </p>
+          <p className="text-xs text-center text-amber-600">⚠️ Utilisez le Pi Browser pour vous connecter</p>
         </CardContent>
       </Card>
     )
   }
 
-  // Connecté
   return (
     <Card className="w-full bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-green-900">
-            <Wallet className="w-5 h-5" />
-            <span className="font-medium">{user?.username}</span>
-          </div>
+          <div className="flex items-center gap-2 text-green-900"><Wallet className="w-5 h-5" /><span className="font-medium">{user?.username}</span></div>
           <div className="flex items-center gap-2">
-            <button
-              onClick={refreshBalance}
-              disabled={isRefreshing}
-              className="p-1 hover:bg-green-200 rounded transition-colors"
-              title="Actualiser le solde"
-            >
-              <RefreshCw className={`w-4 h-4 text-green-600 ${isRefreshing ? 'animate-spin' : ''}`} />
-            </button>
-            <button
-              onClick={() => setShowBalance(!showBalance)}
-              className="p-1 hover:bg-green-200 rounded transition-colors"
-              title={showBalance ? "Masquer le solde" : "Afficher le solde"}
-            >
-              {showBalance ? <EyeOff className="w-4 h-4 text-green-600" /> : <Eye className="w-4 h-4 text-green-600" />}
-            </button>
+            <button onClick={refreshBalance} disabled={isRefreshing} className="p-1 hover:bg-green-200 rounded"><RefreshCw className={`w-4 h-4 text-green-600 ${isRefreshing ? 'animate-spin' : ''}`} /></button>
+            <button onClick={() => setShowBalance(!showBalance)} className="p-1 hover:bg-green-200 rounded">{showBalance ? <EyeOff className="w-4 h-4 text-green-600" /> : <Eye className="w-4 h-4 text-green-600" />}</button>
           </div>
         </CardTitle>
       </CardHeader>
-      
       <CardContent className="space-y-4">
         <div className="bg-white rounded-lg p-3 border border-green-200">
           <p className="text-xs text-gray-500 mb-1">Solde disponible</p>
-          <div className="flex items-baseline gap-1">
-            <span className="text-2xl font-bold text-green-700">
-              {showBalance ? (balance !== null ? `${balance.toFixed(2)}` : 'Chargement...') : '••••••'}
-            </span>
-            <span className="text-sm text-gray-500">π</span>
-          </div>
+          <div className="flex items-baseline gap-1"><span className="text-2xl font-bold text-green-700">{showBalance ? (balance !== null ? `${balance.toFixed(2)}` : 'Chargement...') : '••••••'}</span><span className="text-sm text-gray-500">π</span></div>
         </div>
-
         <div className="bg-white rounded-lg p-3 border border-green-200">
           <p className="text-xs text-gray-500 mb-1">Adresse du Wallet</p>
-          <div className="flex items-center gap-2">
-            <code className="flex-1 text-xs bg-gray-100 p-2 rounded break-all font-mono">
-              {user?.walletAddress || 'Non disponible'}
-            </code>
-            {user?.walletAddress && user.walletAddress !== 'Non disponible' && (
-              <button
-                onClick={handleCopyAddress}
-                className="p-2 hover:bg-gray-200 rounded transition-colors"
-                title="Copier l'adresse"
-              >
-                {copied ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4 text-gray-600" />}
-              </button>
-            )}
+          <div className="flex items-center gap-2"><code className="flex-1 text-xs bg-gray-100 p-2 rounded break-all">{user?.walletAddress || 'Non disponible'}</code>
+            {user?.walletAddress && user.walletAddress !== 'Non disponible' && (<button onClick={handleCopyAddress} className="p-2 hover:bg-gray-200 rounded">{copied ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4 text-gray-600" />}</button>)}
           </div>
         </div>
-
         <div className="grid grid-cols-2 gap-3 text-sm">
-          <div className="bg-white rounded-lg p-3 border border-green-200">
-            <p className="text-xs text-gray-500">ID Utilisateur</p>
-            <p className="font-mono text-xs truncate">{user?.uid}</p>
-          </div>
-          <div className="bg-white rounded-lg p-3 border border-green-200">
-            <p className="text-xs text-gray-500">État</p>
-            <p className="font-semibold text-green-600 flex items-center gap-1">
-              <Shield className="w-3 h-3" />
-              Connecté
-            </p>
-          </div>
+          <div className="bg-white rounded-lg p-3 border border-green-200"><p className="text-xs text-gray-500">ID Utilisateur</p><p className="font-mono text-xs truncate">{user?.uid}</p></div>
+          <div className="bg-white rounded-lg p-3 border border-green-200"><p className="text-xs text-gray-500">État</p><p className="font-semibold text-green-600 flex items-center gap-1"><Shield className="w-3 h-3" /> Connecté</p></div>
         </div>
-
-        <div className="bg-yellow-50 rounded-lg p-2 text-center text-xs text-yellow-700 border border-yellow-200">
-          🏖️ Mode Sandbox - Transactions simulées
-        </div>
-
-        <Button 
-          onClick={handleDisconnect} 
-          variant="destructive" 
-          className="w-full transition-all"
-        >
-          <LogOut className="w-4 h-4 mr-2" />
-          Déconnecter
-        </Button>
+        <div className="bg-green-50 rounded-lg p-2 text-center text-xs text-green-700 border border-green-200">🔐 Mode Production - Transactions réelles</div>
+        <Button onClick={handleDisconnect} variant="destructive" className="w-full"><LogOut className="w-4 h-4 mr-2" /> Déconnecter</Button>
       </CardContent>
     </Card>
   )
