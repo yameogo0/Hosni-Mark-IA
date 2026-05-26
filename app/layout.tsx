@@ -1,5 +1,6 @@
 import { Inter } from "next/font/google";
 import { APP_CONFIG } from "@/lib/app-config";
+import { PiScriptLoader } from "@/components/PiScriptLoader";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -22,6 +23,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="fr">
       <body className={inter.className}>
+        <PiScriptLoader />
         {children}
       </body>
     </html>
