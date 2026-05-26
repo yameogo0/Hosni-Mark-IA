@@ -1,6 +1,6 @@
-// LOCKED FILE - Version corrigée (Production Ready)
-// 🔥 MODE DÉMO - Mettre à true pour les tests, false pour la production
-const FORCE_DEMO_MODE = true;  // ← Mettez à true pour éviter le timeout
+// LOCKED FILE - Version Production
+// 🔥 MODE DÉMO - Mettre à false pour la production
+const FORCE_DEMO_MODE = false;
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { PI_NETWORK_CONFIG, BACKEND_URLS } from "@/lib/system-config";
@@ -80,8 +80,7 @@ function requestParentCredentials(): Promise<{ accessToken: string; appId: strin
   }
 
   const requestId = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-  // 🔥 AUGMENTER LE TIMEOUT de 1500 à 10000 ms
-  const timeoutMs = 10000; // 10 secondes au lieu de 1.5 secondes
+  const timeoutMs = 10000;
 
   return new Promise((resolve) => {
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
@@ -172,7 +171,7 @@ export const usePiNetworkAuthentication = () => {
       throw new Error("Pi SDK not available");
     }
     
-    await window.Pi.init({ version: '2.0', sandbox: PI_NETWORK_CONFIG?.SANDBOX ?? true });
+    await window.Pi.init({ version: '2.0', sandbox: PI_NETWORK_CONFIG?.SANDBOX ?? false });
 
     setAuthMessage("Authenticating Pi Network...");
     const scopes = ['username', 'wallet_address', 'payments'];
@@ -194,9 +193,9 @@ export const usePiNetworkAuthentication = () => {
     setError(null);
     setIsLoading(true);
     
-    // 🔥 MODE DÉMO - Pour les tests sans SDK Pi
+    // MODE PRODUCTION - Authentification réelle
     if (FORCE_DEMO_MODE) {
-      console.log("🏖️ Mode démo - Authentification automatique");
+      // Ce bloc ne s'exécute pas car FORCE_DEMO_MODE = false
       setTimeout(() => {
         setPiAccessToken("demo_token_" + Date.now());
         setIsAuthenticated(true);
