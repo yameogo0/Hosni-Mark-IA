@@ -1,8 +1,8 @@
-// Configuration Pi Network - FORCER LE MODE SANDBOX
+// Configuration Pi Network - MODE PRODUCTION
 export const PI_NETWORK_CONFIG = {
   SDK_URL: "https://sdk.minepi.com/pi-sdk.js",
   SDK_VERSION: "2.0",
-  SANDBOX: true,  // ← FORCÉ à true pour le mode démo
+  SANDBOX: false,  // ← Mode production (false = transactions réelles)
   APP_ID: process.env.NEXT_PUBLIC_PI_APP_ID || "",
   API_KEY: process.env.PI_API_KEY || "",
 } as const;
@@ -11,51 +11,33 @@ export const PI_NETWORK_CONFIG = {
 export const BACKEND_CONFIG = {
   BASE_URL: process.env.NEXT_PUBLIC_API_URL || "https://backend.appstudio-u7cm9zhmha0ruwv8.piappengine.com",
   BLOCKCHAIN_BASE_URL: process.env.NEXT_PUBLIC_BLOCKCHAIN_URL || "https://api.testnet.minepi.com",
-  TIMEOUT: 30000, // 30 seconds
+  TIMEOUT: 30000,
   RETRY_ATTEMPTS: 3,
   RETRY_DELAY: 1000,
 } as const;
 
-// Helper pour construire les URLs avec timeout
-const buildUrl = (path: string): string => {
-  return `${BACKEND_CONFIG.BASE_URL}${path}`;
-};
-
 // Backend API URLs
 export const BACKEND_URLS = {
-  // Auth endpoints
   LOGIN: `${BACKEND_CONFIG.BASE_URL}/v1/login`,
   LOGIN_PREVIEW: `${BACKEND_CONFIG.BASE_URL}/v1/login/preview`,
   LOGOUT: `${BACKEND_CONFIG.BASE_URL}/v1/logout`,
   REFRESH_TOKEN: `${BACKEND_CONFIG.BASE_URL}/v1/refresh`,
-  
-  // Chat endpoints
   CHAT: `${BACKEND_CONFIG.BASE_URL}/v1/chat/default`,
   CHAT_WITH_IMAGE: `${BACKEND_CONFIG.BASE_URL}/v1/chat/with-image`,
   CHAT_HISTORY: (sessionId: string) => `${BACKEND_CONFIG.BASE_URL}/v1/chat/${sessionId}/history`,
   CLEAR_CHAT: (sessionId: string) => `${BACKEND_CONFIG.BASE_URL}/v1/chat/${sessionId}/clear`,
-  
-  // Products endpoints
   GET_PRODUCTS: (appId: string) => `${BACKEND_CONFIG.BASE_URL}/v1/apps/${appId}/products`,
   GET_PRODUCT: (appId: string, productId: string) => `${BACKEND_CONFIG.BASE_URL}/v1/apps/${appId}/products/${productId}`,
-  
-  // Payment endpoints
   GET_PAYMENT: (paymentId: string) => `${BACKEND_CONFIG.BASE_URL}/proxy/v2/payments/${paymentId}`,
   APPROVE_PAYMENT: (paymentId: string) => `${BACKEND_CONFIG.BASE_URL}/proxy/v2/payments/${paymentId}/approve`,
   COMPLETE_PAYMENT: (paymentId: string) => `${BACKEND_CONFIG.BASE_URL}/proxy/v2/payments/${paymentId}/complete`,
   CANCEL_PAYMENT: (paymentId: string) => `${BACKEND_CONFIG.BASE_URL}/proxy/v2/payments/${paymentId}/cancel`,
-  
-  // Subscription endpoints
   SUBSCRIPTION_STATUS: `${BACKEND_CONFIG.BASE_URL}/v1/subscription/status`,
   SUBSCRIPTION_CANCEL: `${BACKEND_CONFIG.BASE_URL}/v1/subscription/cancel`,
   SUBSCRIPTION_HISTORY: `${BACKEND_CONFIG.BASE_URL}/v1/subscription/history`,
-  
-  // Wallet endpoints
   WALLET_BALANCE: `${BACKEND_CONFIG.BASE_URL}/v1/wallet/balance`,
   WALLET_TRANSACTIONS: `${BACKEND_CONFIG.BASE_URL}/v1/wallet/transactions`,
   WALLET_ADDRESS: `${BACKEND_CONFIG.BASE_URL}/v1/wallet/address`,
-  
-  // Analytics
   ANALYTICS_TRACK: `${BACKEND_CONFIG.BASE_URL}/v1/analytics/track`,
   ANALYTICS_STATS: `${BACKEND_CONFIG.BASE_URL}/v1/analytics/stats`,
 } as const;
@@ -67,8 +49,6 @@ export const PI_PLATFORM_URLS = {
   EXPLORER_MAINNET: "https://explorer.minepi.com",
   EXPLORER_TESTNET: "https://testnet-explorer.minepi.com",
   DEVELOPER_PORTAL: "https://developers.minepi.com",
-  
-  // Helper pour obtenir l'URL de l'API selon l'environnement
   getApiUrl: () => PI_NETWORK_CONFIG.SANDBOX ? PI_PLATFORM_URLS.TESTNET : PI_PLATFORM_URLS.MAINNET,
 } as const;
 
@@ -81,7 +61,6 @@ export const PI_BLOCKCHAIN_URLS = {
   GET_NETWORK: `${BACKEND_CONFIG.BLOCKCHAIN_BASE_URL}/network`,
 } as const;
 
-// Types pour les réponses
 export interface ApiResponse<T = any> {
   success: boolean;
   data?: T;
@@ -89,7 +68,6 @@ export interface ApiResponse<T = any> {
   message?: string;
 }
 
-// Helper pour les requêtes
 export async function apiRequest<T>(
   url: string,
   options?: RequestInit
@@ -108,7 +86,6 @@ export async function apiRequest<T>(
     });
 
     clearTimeout(timeoutId);
-
     const data = await response.json();
     
     if (!response.ok) {
@@ -133,7 +110,6 @@ export async function apiRequest<T>(
   }
 }
 
-// Helper pour vérifier la connexion au backend
 export async function checkBackendHealth(): Promise<boolean> {
   try {
     const response = await fetch(`${BACKEND_CONFIG.BASE_URL}/health`, {
@@ -146,7 +122,6 @@ export async function checkBackendHealth(): Promise<boolean> {
   }
 }
 
-// Configuration des types
 export type NetworkEnvironment = 'mainnet' | 'testnet' | 'sandbox';
 
 export const getNetworkConfig = (env: NetworkEnvironment = 'sandbox') => {
