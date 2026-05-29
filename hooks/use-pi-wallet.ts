@@ -31,8 +31,15 @@ interface PaymentData {
   metadata: { tier: string }
 }
 
-// 🔥 Mode démo - Mettre à true pour les tests
-const DEMO_MODE = true;
+// 🔥 Mode démo - Mettre à true pour les tests, false pour la production
+const DEMO_MODE = true
+
+// 🔥 Clé pour le stockage localStorage
+const STORAGE_KEYS = {
+  USER: 'hosni_user',
+  SUBSCRIPTION: 'hosni_subscription',
+  WALLET: 'hosni_wallet'
+}
 
 export function usePiWallet() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -43,16 +50,28 @@ export function usePiWallet() {
   const [isPiSDKReady, setIsPiSDKReady] = useState(false)
   const [balance, setBalance] = useState<number | null>(null)
   const authAttempted = useRef(false)
+  const sdkInterval = useRef<NodeJS.Timeout | null>(null)
+  const sdkTimeout = useRef<NodeJS.Timeout | null>(null)
+
+  // Nettoyage des timers
+  const cleanupSDKCheck = useCallback(() => {
+    if (sdkInterval.current) {
+      clearInterval(sdkInterval.current)
+      sdkInterval.current = null
+    }
+    if (sdkTimeout.current) {
+      clearTimeout(sdkTimeout.current)
+      sdkTimeout.current = null
+    }
+  }, [])
 
   // Vérifier si le SDK Pi est chargé
   useEffect(() => {
-    let interval: NodeJS.Timeout | null = null
-
     const checkPiSDK = () => {
       if (typeof window !== 'undefined' && window.Pi) {
         setIsPiSDKReady(true)
         console.log('✅ Pi SDK chargé dans usePiWallet')
-        if (interval) clearInterval(interval)
+        cleanupSDKCheck()
         return true
       }
       return false
@@ -60,27 +79,24 @@ export function usePiWallet() {
 
     if (checkPiSDK()) return
 
-    interval = setInterval(() => {
-      if (checkPiSDK() && interval) clearInterval(interval)
+    sdkInterval.current = setInterval(() => {
+      if (checkPiSDK() && sdkInterval.current) clearInterval(sdkInterval.current)
     }, 500)
 
-    const timeout = setTimeout(() => {
-      if (interval) clearInterval(interval)
+    sdkTimeout.current = setTimeout(() => {
+      cleanupSDKCheck()
       console.warn('⚠️ Pi SDK non détecté après 10 secondes')
       setIsPiSDKReady(false)
     }, 10000)
 
-    return () => {
-      if (interval) clearInterval(interval)
-      clearTimeout(timeout)
-    }
-  }, [])
+    return cleanupSDKCheck
+  }, [cleanupSDKCheck])
 
   // Vérifier l'abonnement actuel
   const checkSubscription = useCallback(() => {
-    const saved = localStorage.getItem('hosni_subscription')
-    if (saved) {
-      try {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.SUBSCRIPTION)
+      if (saved) {
         const sub = JSON.parse(saved)
         const now = new Date()
         const expires = new Date(sub.expiresAt)
@@ -88,16 +104,13 @@ export function usePiWallet() {
         if (expires > now) {
           setSubscription({ ...sub, status: 'active' })
           return sub
-        } else {
-          localStorage.removeItem('hosni_subscription')
-          setSubscription(null)
-          return null
         }
-      } catch (e) {
-        console.error('Erreur chargement abonnement:', e)
-        localStorage.removeItem('hosni_subscription')
       }
+    } catch (e) {
+      console.error('Erreur chargement abonnement:', e)
     }
+    localStorage.removeItem(STORAGE_KEYS.SUBSCRIPTION)
+    setSubscription(null)
     return null
   }, [])
 
@@ -124,10 +137,34 @@ export function usePiWallet() {
       txid
     }
     
-    localStorage.setItem('hosni_subscription', JSON.stringify(subscriptionData))
+    localStorage.setItem(STORAGE_KEYS.SUBSCRIPTION, JSON.stringify(subscriptionData))
     setSubscription(subscriptionData)
     return subscriptionData
   }, [])
+
+  // Récupérer le solde du wallet
+  const fetchBalance = useCallback(async () => {
+    if (DEMO_MODE) {
+      setBalance(Math.floor(Math.random() * 90) + 10)
+      return
+    }
+    
+    if (!user?.accessToken) return null
+    
+    try {
+      const response = await fetch('/api/pi/balance', {
+        headers: { 'Authorization': `Bearer ${user.accessToken}` }
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setBalance(data.balance)
+        return data.balance
+      }
+    } catch (error) {
+      console.error('Erreur récupération solde:', error)
+    }
+    return null
+  }, [user?.accessToken])
 
   // Connexion Pi Wallet
   const login = useCallback(async () => {
@@ -137,7 +174,7 @@ export function usePiWallet() {
     setError(null)
 
     try {
-      // 🔥 Mode démo
+      // Mode démo
       if (DEMO_MODE) {
         console.log('🏖️ Mode démo - Authentification simulée')
         const demoUser: PiUser = {
@@ -148,8 +185,8 @@ export function usePiWallet() {
         }
         setUser(demoUser)
         setIsAuthenticated(true)
-        localStorage.setItem('hosni_user', JSON.stringify(demoUser))
-        setBalance(Math.floor(Math.random() * 90) + 10)
+        localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(demoUser))
+        await fetchBalance()
         checkSubscription()
         authAttempted.current = true
         setIsLoading(false)
@@ -175,10 +212,11 @@ export function usePiWallet() {
           }
           setUser(userData)
           setIsAuthenticated(true)
-          localStorage.setItem('hosni_user', JSON.stringify(userData))
+          localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(userData))
           await fetchBalance()
           checkSubscription()
           authAttempted.current = true
+          setIsLoading(false)
           return true
         }
       }
@@ -190,7 +228,7 @@ export function usePiWallet() {
       setIsLoading(false)
     }
     return false
-  }, [isPiSDKReady, isAuthenticated, checkSubscription, fetchBalance])
+  }, [isPiSDKReady, isAuthenticated, fetchBalance, checkSubscription])
 
   // Déconnexion
   const logout = useCallback(() => {
@@ -198,38 +236,11 @@ export function usePiWallet() {
     setIsAuthenticated(false)
     setSubscription(null)
     setBalance(null)
-    localStorage.removeItem('hosni_user')
-    localStorage.removeItem('hosni_subscription')
+    localStorage.removeItem(STORAGE_KEYS.USER)
+    localStorage.removeItem(STORAGE_KEYS.SUBSCRIPTION)
     authAttempted.current = false
     console.log('🔓 Déconnexion effectuée')
   }, [])
-
-  // Récupérer le solde du wallet
-  const fetchBalance = useCallback(async () => {
-    // Mode démo
-    if (DEMO_MODE) {
-      setBalance(Math.floor(Math.random() * 90) + 10)
-      return
-    }
-    
-    if (!user?.accessToken) return null
-    
-    try {
-      const response = await fetch('/api/pi/balance', {
-        headers: {
-          'Authorization': `Bearer ${user.accessToken}`
-        }
-      })
-      if (response.ok) {
-        const data = await response.json()
-        setBalance(data.balance)
-        return data.balance
-      }
-    } catch (error) {
-      console.error('Erreur récupération solde:', error)
-    }
-    return null
-  }, [user?.accessToken])
 
   // Traitement du paiement
   const processPayment = useCallback(async (data: PaymentData) => {
@@ -287,7 +298,7 @@ export function usePiWallet() {
 
   // Obtenir le tier actuel
   const getCurrentTier = useCallback(() => {
-    if (!subscription) return 'basic'
+    if (!subscription) return 'Basic'
     return subscription.tier === 'pro' ? 'Pro' : 
            subscription.tier === 'premium' ? 'Premium' : 'Basic'
   }, [subscription])
@@ -317,9 +328,8 @@ export function usePiWallet() {
     
     setIsLoading(true)
     try {
-      // Mode démo
       if (DEMO_MODE) {
-        localStorage.removeItem('hosni_subscription')
+        localStorage.removeItem(STORAGE_KEYS.SUBSCRIPTION)
         setSubscription(null)
         return { success: true }
       }
@@ -334,7 +344,7 @@ export function usePiWallet() {
       })
       
       if (response.ok) {
-        localStorage.removeItem('hosni_subscription')
+        localStorage.removeItem(STORAGE_KEYS.SUBSCRIPTION)
         setSubscription(null)
         return { success: true }
       } else {
@@ -350,7 +360,7 @@ export function usePiWallet() {
 
   // Charger la session persistante
   useEffect(() => {
-    const savedUser = localStorage.getItem('hosni_user')
+    const savedUser = localStorage.getItem(STORAGE_KEYS.USER)
     if (savedUser) {
       try {
         const parsed = JSON.parse(savedUser)
@@ -359,7 +369,7 @@ export function usePiWallet() {
         authAttempted.current = true
       } catch (e) {
         console.error('Erreur chargement session:', e)
-        localStorage.removeItem('hosni_user')
+        localStorage.removeItem(STORAGE_KEYS.USER)
       }
     }
     checkSubscription()
