@@ -1,7 +1,8 @@
 'use client'
 
 import type React from "react"
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, Suspense } from "react"
+import dynamic from "next/dynamic"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -11,14 +12,16 @@ import { useChatbot } from "@/hooks/use-chatbot"
 import { useScrollToBottom } from "@/hooks/use-scroll-to-bottom"
 import { useSubscriptionStatus } from "@/hooks/use-subscription-status"
 import { APP_CONFIG, COLORS } from "@/lib/app-config"
-import { WelcomeMessage } from "@/components/welcome-message"
-import { SubscriptionBanner } from "@/components/subscription-banner"
-import { SubscriptionStatusIndicator } from "@/components/subscription-status"
-import { ImageUpload } from "@/components/image-upload"
-import { PaymentModal } from "@/components/payment-modal"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useToast } from "@/hooks/use-toast"
 import { usePiWallet } from "@/hooks/use-pi-wallet"
+
+// Chargement dynamique des composants lourds
+const WelcomeMessage = dynamic(() => import("@/components/welcome-message").then(mod => mod.WelcomeMessage), { ssr: false })
+const SubscriptionBanner = dynamic(() => import("@/components/subscription-banner").then(mod => mod.SubscriptionBanner), { ssr: false })
+const SubscriptionStatusIndicator = dynamic(() => import("@/components/subscription-status").then(mod => mod.SubscriptionStatusIndicator), { ssr: false })
+const ImageUpload = dynamic(() => import("@/components/image-upload").then(mod => mod.ImageUpload), { ssr: false })
+const PaymentModal = dynamic(() => import("@/components/payment-modal").then(mod => mod.PaymentModal), { ssr: false })
 
 declare global {
   interface Window {
@@ -26,7 +29,26 @@ declare global {
   }
 }
 
+// Composant de chargement
+function LoadingSpinner() {
+  return (
+    <div className="flex items-center justify-center min-h-screen">
+      <Loader2 className="w-8 h-8 animate-spin text-primary" />
+    </div>
+  )
+}
+
 export default function ChatBot() {
+  const [mounted, setMounted] = useState(false)
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false)
+  const [isPiSDKReady, setIsPiSDKReady] = useState(false)
+  const { toast } = useToast()
+  
+  const chatbot = useChatbot()
+  const subscriptionStatus = useSubscriptionStatus()
+  const { bottomRef } = useScrollToBottom([chatbot.messages])
+  const { isAuthenticated: isPiAuthenticated } = usePiWallet()
+
   const {
     messages,
     input,
@@ -41,18 +63,8 @@ export default function ChatBot() {
     handleImageSelect,
     handleImageRemove,
     piAccessToken,
-  } = useChatbot()
+  } = chatbot
 
-  const subscriptionStatus = useSubscriptionStatus()
-  const { bottomRef } = useScrollToBottom([messages])
-  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false)
-  const [isPiSDKReady, setIsPiSDKReady] = useState(false)
-  const [mounted, setMounted] = useState(false)
-  const { toast } = useToast()
-  
-  const { isAuthenticated: isPiAuthenticated } = usePiWallet()
-
-  // Gestion du montage pour éviter les erreurs d'hydratation
   useEffect(() => {
     setMounted(true)
   }, [])
@@ -110,11 +122,10 @@ export default function ChatBot() {
   }, [subscriptionStatus?.canAskQuestion])
 
   const isPremium = hasPremiumAccess()
-  const isFirstMessage = messages.length === 1 && messages[0].id === "1"
+  const isFirstMessage = messages.length === 1 && messages[0]?.id === "1"
 
-  // Évite les erreurs d'hydratation
   if (!mounted) {
-    return null
+    return <LoadingSpinner />
   }
 
   if (!isAuthenticated) {
@@ -183,13 +194,15 @@ export default function ChatBot() {
           </CardTitle>
         </CardHeader>
 
-        <CardContent className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-custom">
+        <CardContent className="flex-1 overflow-y-auto p-4 space-y-4">
           {isFirstMessage && (
-            <div className="space-y-4 animate-fade-in">
-              <SubscriptionStatusIndicator status={subscriptionStatus} />
-              <WelcomeMessage />
-              <SubscriptionBanner onSubscribeClick={handleSubscribeClick} />
-            </div>
+            <Suspense fallback={<LoadingSpinner />}>
+              <div className="space-y-4">
+                <SubscriptionStatusIndicator status={subscriptionStatus} />
+                <WelcomeMessage />
+                <SubscriptionBanner onSubscribeClick={handleSubscribeClick} />
+              </div>
+            </Suspense>
           )}
           
           {!isFirstMessage && (
@@ -204,7 +217,7 @@ export default function ChatBot() {
             return (
               <div
                 key={message.id}
-                className={`flex gap-3 ${message.sender === "user" ? "flex-row-reverse" : "flex-row"} animate-slide-up`}
+                className={`flex gap-3 ${message.sender === "user" ? "flex-row-reverse" : "flex-row"}`}
               >
                 <div
                   className={`w-8 h-8 rounded-full flex items-center justify-center text-white flex-shrink-0 shadow-md`}
@@ -292,11 +305,7 @@ export default function ChatBot() {
             />
             <Button
               onClick={sendMessage}
-              disabled={
-                isLoading || 
-                (!subscriptionStatus.canAskQuestion && !isPremium) || 
-                (!input.trim() && !selectedImage)
-              }
+              disabled={isLoading || (!subscriptionStatus.canAskQuestion && !isPremium) || (!input.trim() && !selectedImage)}
               className="hover:opacity-90 transition-opacity shadow-md"
               style={{ backgroundColor: COLORS.PRIMARY }}
               size="icon"
