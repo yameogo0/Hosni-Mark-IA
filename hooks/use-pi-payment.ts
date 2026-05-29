@@ -67,7 +67,7 @@ interface PaymentCallbacks {
   onError?: (error: string) => void
 }
 
-// Helper pour obtenir l'URL d'approbation
+// Helper pour obtenir l'URL d'approbation avec fallback
 const getApproveUrl = (paymentId: string): string => {
   if (BACKEND_URLS?.APPROVE_PAYMENT) {
     return typeof BACKEND_URLS.APPROVE_PAYMENT === 'function'
@@ -77,7 +77,7 @@ const getApproveUrl = (paymentId: string): string => {
   return `/api/pi/payment/${paymentId}/approve`;
 };
 
-// Helper pour obtenir l'URL de complétion
+// Helper pour obtenir l'URL de complétion avec fallback
 const getCompleteUrl = (paymentId: string): string => {
   if (BACKEND_URLS?.COMPLETE_PAYMENT) {
     return typeof BACKEND_URLS.COMPLETE_PAYMENT === 'function'
@@ -86,6 +86,9 @@ const getCompleteUrl = (paymentId: string): string => {
   }
   return `/api/pi/payment/${paymentId}/complete`;
 };
+
+// 🔥 Mode démo - Mettre à true pour les tests
+const DEMO_MODE = true;
 
 export function usePiPayment(accessToken: string | null) {
   const [isProcessing, setIsProcessing] = useState(false)
@@ -98,6 +101,36 @@ export function usePiPayment(accessToken: string | null) {
     plan: SubscriptionPlan,
     callbacks?: PaymentCallbacks
   ) => {
+    // Mode démo - simulation
+    if (DEMO_MODE) {
+      console.log("🏖️ Mode démo - Paiement simulé pour:", plan.name)
+      setIsProcessing(true)
+      
+      try {
+        await new Promise(resolve => setTimeout(resolve, 1500))
+        
+        const subscriptionData = {
+          planId: plan.id,
+          planName: plan.name,
+          amount: plan.amount,
+          activatedAt: new Date().toISOString(),
+          expiresAt: new Date(Date.now() + (plan.duration === 'weekly' ? 7 : 30) * 24 * 60 * 60 * 1000).toISOString(),
+          txid: `simulated_${Date.now()}`,
+          paymentId: `simulated_payment_${Date.now()}`
+        }
+        localStorage.setItem('hinos_subscription', JSON.stringify(subscriptionData))
+        
+        setIsProcessing(false)
+        callbacks?.onSuccess?.()
+      } catch (error) {
+        setIsProcessing(false)
+        const errorMsg = "Erreur lors du paiement simulé"
+        setPaymentError(errorMsg)
+        callbacks?.onError?.(errorMsg)
+      }
+      return
+    }
+
     // Validation de l'authentification
     if (!accessToken) {
       const error = "Non authentifié. Veuillez vous reconnecter."
@@ -135,7 +168,6 @@ export function usePiPayment(accessToken: string | null) {
       // Créer une promesse pour gérer le paiement
       const paymentPromise = new Promise<void>((resolve, reject) => {
         window.Pi.createPayment(paymentData, {
-          // Step 1: Payment created, send to backend for approval
           onReadyForServerApproval: async (paymentId: string) => {
             console.log("📝 Payment ready for approval:", paymentId)
             setLastPaymentId(paymentId)
@@ -166,7 +198,6 @@ export function usePiPayment(accessToken: string | null) {
             }
           },
 
-          // Step 2: Payment completed on blockchain, finalize on backend
           onReadyForServerCompletion: async (paymentId: string, txid: string) => {
             console.log("🔗 Payment ready for completion:", paymentId, txid)
             
@@ -193,7 +224,6 @@ export function usePiPayment(accessToken: string | null) {
               const data = await response.json()
               console.log("🎉 Payment completed successfully:", data)
               
-              // Sauvegarder l'abonnement dans localStorage
               const subscriptionData = {
                 planId: plan.id,
                 planName: plan.name,
@@ -212,13 +242,11 @@ export function usePiPayment(accessToken: string | null) {
             }
           },
 
-          // User cancelled the payment
           onCancel: (paymentId: string) => {
             console.log("❌ Payment cancelled:", paymentId)
             reject(new Error("PAYMENT_CANCELLED"))
           },
 
-          // Payment error occurred
           onError: (error: Error, payment?: { paymentId: string }) => {
             console.error("❌ Payment error:", error, payment)
             reject(error)
@@ -250,7 +278,6 @@ export function usePiPayment(accessToken: string | null) {
     }
   }, [accessToken])
 
-  // Vérifier si le SDK Pi est disponible
   const isPiSDKAvailable = typeof window !== 'undefined' && typeof window.Pi !== 'undefined'
 
   return {
@@ -276,10 +303,8 @@ export function useSimulatedPayment() {
     try {
       console.log("💰 [SIMULATION] Initiating payment for plan:", plan.name)
       
-      // Simuler un délai réseau
       await new Promise(resolve => setTimeout(resolve, 1500))
       
-      // Sauvegarder l'abonnement dans localStorage
       const subscriptionData = {
         planId: plan.id,
         planName: plan.name,
