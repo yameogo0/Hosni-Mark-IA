@@ -12,13 +12,13 @@ export const APP_CONFIG = {
   SHORT_NAME: "Hosni",
   
   // UPDATE: Set to the description of the chatbot app
-  DESCRIPTION: "Hosni IA est une application innovante conçue pour accompagner les professionnels, entrepreneurs et étudiants dans leurs stratégies de marketing et de gestion d'entreprise. Grâce à son IA",
+  DESCRIPTION: "Hosni IA est une application innovante conçue pour accompagner les professionnels, entrepreneurs et étudiants dans leurs stratégies de marketing et de gestion d'entreprise.",
   
   // UPDATE: App version
   VERSION: "1.0.0",
   
   // UPDATE: App URL (production)
-  URL: "https://hosni-mark-6asp0g8sj-yameogooussouni-2461s-projects.vercel.app",
+  URL: process.env.NEXT_PUBLIC_APP_URL || "https://hosni-mark-ia.vercel.app",
   
   // UPDATE: Support email
   SUPPORT_EMAIL: "support@hosni-ia.com",
@@ -85,49 +85,26 @@ export const COLORS = {
 
 // Animation Configuration
 export const ANIMATION_CONFIG = {
-  // UPDATE: Message animation duration in ms
   MESSAGE_DURATION: 300,
-  
-  // UPDATE: Typing indicator duration in ms
   TYPING_DURATION: 1000,
-  
-  // UPDATE: Scroll behavior ('smooth' or 'auto')
   SCROLL_BEHAVIOR: "smooth" as const,
 } as const;
 
 // Limits Configuration
 export const LIMITS_CONFIG = {
-  // UPDATE: Maximum message length
   MAX_MESSAGE_LENGTH: 2000,
-  
-  // UPDATE: Maximum image size in MB
   MAX_IMAGE_SIZE_MB: 5,
-  
-  // UPDATE: Questions limit for free tier
   FREE_TIER_QUESTIONS_LIMIT: 10,
-  
-  // UPDATE: Questions limit for weekly tier
   WEEKLY_TIER_QUESTIONS_LIMIT: Infinity,
-  
-  // UPDATE: Questions limit for monthly tier
   MONTHLY_TIER_QUESTIONS_LIMIT: Infinity,
 } as const;
 
 // Pi Network Configuration
 export const PI_CONFIG = {
-  // UPDATE: SDK URL
   SDK_URL: "https://sdk.minepi.com/pi-sdk.js",
-  
-  // UPDATE: SDK version
   SDK_VERSION: "2.0",
-  
-  // UPDATE: Sandbox mode (true for testing, false for production)
-  SANDBOX: process.env.NEXT_PUBLIC_PI_NETWORK_SANDBOX === 'true' || true,
-  
-  // UPDATE: Required scopes for authentication
+  SANDBOX: process.env.NEXT_PUBLIC_PI_NETWORK_SANDBOX === 'true' || false,
   AUTH_SCOPES: ["username", "wallet_address", "payments"] as const,
-  
-  // UPDATE: Subscription plans
   PLANS: {
     weekly: {
       name: "Hebdomadaire",
