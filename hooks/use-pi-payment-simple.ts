@@ -21,8 +21,8 @@ export interface PiPaymentResult {
   error?: string
 }
 
-// 🔥 Mode simulation - Mettre à true pour les tests (pas de vrai paiement)
-const SIMULATION_MODE = true;
+// 🔥 Mode simulation - Mettre à false pour les vrais paiements
+const SIMULATION_MODE = false;
 
 // 🔥 Délai de simulation (ms)
 const SIMULATION_DELAY = 1500;
@@ -38,12 +38,11 @@ export function usePiPaymentSimple() {
     setPaymentStatus('🔄 Activation...')
 
     try {
-      // 🔥 Mode simulation - Succès immédiat
+      // 🔥 Mode simulation - Pour les tests uniquement
       if (SIMULATION_MODE) {
         console.log('🏖️ Mode simulation - Paiement simulé pour:', config.planId)
         setPaymentStatus('🔄 Simulation en cours...')
         
-        // Simuler un délai réseau
         await new Promise(resolve => setTimeout(resolve, SIMULATION_DELAY))
         
         const durationDays = config.planId === 'pro_weekly' ? 7 : 30
@@ -69,13 +68,13 @@ export function usePiPaymentSimple() {
         }
       }
 
-      // 🔥 Mode réel - Vrai paiement Pi
+      // 🔥 Mode réel - Vrai paiement Pi (SIMULATION_MODE = false)
+      console.log('💰 Mode réel - Création du paiement Pi:', config)
+      
       // Vérifier que le SDK Pi est disponible
       if (typeof window === 'undefined' || !window.Pi) {
         throw new Error('Pi SDK non disponible. Veuillez utiliser le Pi Browser.')
       }
-
-      console.log('💰 Création du paiement Pi:', config)
 
       // Créer une promesse pour gérer le paiement
       return new Promise((resolve, reject) => {
