@@ -31,6 +31,9 @@ interface PaymentData {
   metadata: { tier: string }
 }
 
+// 🔥 Mode démo - Mettre à true pour les tests
+const DEMO_MODE = true;
+
 export function usePiWallet() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [user, setUser] = useState<PiUser | null>(null)
@@ -61,7 +64,6 @@ export function usePiWallet() {
       if (checkPiSDK() && interval) clearInterval(interval)
     }, 500)
 
-    // Timeout après 10 secondes
     const timeout = setTimeout(() => {
       if (interval) clearInterval(interval)
       console.warn('⚠️ Pi SDK non détecté après 10 secondes')
@@ -135,6 +137,26 @@ export function usePiWallet() {
     setError(null)
 
     try {
+      // 🔥 Mode démo
+      if (DEMO_MODE) {
+        console.log('🏖️ Mode démo - Authentification simulée')
+        const demoUser: PiUser = {
+          uid: 'demo_' + Date.now(),
+          username: 'demo_user',
+          accessToken: 'demo_token_' + Date.now(),
+          walletAddress: '0x' + Math.random().toString(36).slice(2, 10)
+        }
+        setUser(demoUser)
+        setIsAuthenticated(true)
+        localStorage.setItem('hosni_user', JSON.stringify(demoUser))
+        setBalance(Math.floor(Math.random() * 90) + 10)
+        checkSubscription()
+        authAttempted.current = true
+        setIsLoading(false)
+        return true
+      }
+
+      // Mode réel
       if (isPiSDKReady && window.Pi) {
         console.log('🔐 Authentification Pi...')
         const scopes = ['username', 'payments', 'wallet_address']
@@ -154,25 +176,11 @@ export function usePiWallet() {
           setUser(userData)
           setIsAuthenticated(true)
           localStorage.setItem('hosni_user', JSON.stringify(userData))
+          await fetchBalance()
           checkSubscription()
           authAttempted.current = true
           return true
         }
-      } else {
-        // Mode démo
-        console.log('🏖️ Mode démo - Authentification simulée')
-        const demoUser: PiUser = {
-          uid: 'demo_' + Date.now(),
-          username: 'demo_user',
-          accessToken: 'demo_token',
-          walletAddress: '0x' + Math.random().toString(36).slice(2, 10)
-        }
-        setUser(demoUser)
-        setIsAuthenticated(true)
-        localStorage.setItem('hosni_user', JSON.stringify(demoUser))
-        checkSubscription()
-        authAttempted.current = true
-        return true
       }
     } catch (err: any) {
       console.error('Erreur connexion:', err)
@@ -182,7 +190,7 @@ export function usePiWallet() {
       setIsLoading(false)
     }
     return false
-  }, [isPiSDKReady, isAuthenticated, checkSubscription])
+  }, [isPiSDKReady, isAuthenticated, checkSubscription, fetchBalance])
 
   // Déconnexion
   const logout = useCallback(() => {
@@ -198,6 +206,12 @@ export function usePiWallet() {
 
   // Récupérer le solde du wallet
   const fetchBalance = useCallback(async () => {
+    // Mode démo
+    if (DEMO_MODE) {
+      setBalance(Math.floor(Math.random() * 90) + 10)
+      return
+    }
+    
     if (!user?.accessToken) return null
     
     try {
@@ -223,7 +237,16 @@ export function usePiWallet() {
     setError(null)
     
     try {
-      // Appel à l'API de paiement
+      // Mode démo - simulation
+      if (DEMO_MODE) {
+        console.log('🏖️ Mode démo - Paiement simulé')
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        const subscriptionData = saveSubscription(data.metadata.tier)
+        setBalance(prev => (prev || 0) - data.amount)
+        return { success: true, subscription: subscriptionData }
+      }
+
+      // Mode réel
       const response = await fetch('/api/pi/payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -241,11 +264,7 @@ export function usePiWallet() {
       }
 
       const paymentResult = await response.json()
-      
-      // Sauvegarder l'abonnement
       const subscriptionData = saveSubscription(data.metadata.tier, paymentResult.paymentId, paymentResult.txid)
-      
-      // Rafraîchir le solde
       await fetchBalance()
       
       return { success: true, subscription: subscriptionData, paymentId: paymentResult.paymentId }
@@ -298,6 +317,13 @@ export function usePiWallet() {
     
     setIsLoading(true)
     try {
+      // Mode démo
+      if (DEMO_MODE) {
+        localStorage.removeItem('hosni_subscription')
+        setSubscription(null)
+        return { success: true }
+      }
+
       const response = await fetch('/api/subscription/cancel', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -342,15 +368,15 @@ export function usePiWallet() {
 
   // Rafraîchir les données périodiquement
   useEffect(() => {
-    if (isAuthenticated && user?.accessToken) {
+    if (isAuthenticated && !DEMO_MODE) {
       fetchBalance()
       const interval = setInterval(() => {
         fetchBalance()
         checkSubscription()
-      }, 60000) // Toutes les minutes
+      }, 60000)
       return () => clearInterval(interval)
     }
-  }, [isAuthenticated, user?.accessToken, fetchBalance, checkSubscription])
+  }, [isAuthenticated, fetchBalance, checkSubscription])
 
   return {
     isAuthenticated,
