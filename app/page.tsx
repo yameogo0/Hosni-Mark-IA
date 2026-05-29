@@ -1,7 +1,11 @@
+// app/page.tsx
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 'use client'
 
 import type React from "react"
-import { useState, useEffect, useCallback, useMemo } from "react"
+import { useState, useEffect, useCallback } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -50,7 +54,7 @@ export default function ChatBot() {
   const [mounted, setMounted] = useState(false)
   const { toast } = useToast()
   
-  const { isAuthenticated: isPiAuthenticated, user: piUser, login: piLogin } = usePiWallet()
+  const { isAuthenticated: isPiAuthenticated } = usePiWallet()
 
   // Gestion du montage pour éviter les erreurs d'hydratation
   useEffect(() => {
