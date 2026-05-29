@@ -1,12 +1,13 @@
-// Configuration Pi Network - MODE PRODUCTION
+// Configuration Pi Network - MODE PRODUCTION (modifiable via variable d'environnement)
 export const PI_NETWORK_CONFIG = {
   SDK_URL: "https://sdk.minepi.com/pi-sdk.js",
   SDK_VERSION: "2.0",
-  SANDBOX: false,
+  SANDBOX: process.env.NEXT_PUBLIC_PI_NETWORK_SANDBOX === 'true' || false,
   APP_ID: process.env.NEXT_PUBLIC_PI_APP_ID || "",
   API_KEY: process.env.PI_API_KEY || "",
 } as const;
 
+// Backend Configuration avec fallback
 export const BACKEND_CONFIG = {
   BASE_URL: process.env.NEXT_PUBLIC_API_URL || "https://backend.appstudio-u7cm9zhmha0ruwv8.piappengine.com",
   BLOCKCHAIN_BASE_URL: process.env.NEXT_PUBLIC_BLOCKCHAIN_URL || "https://api.testnet.minepi.com",
@@ -15,6 +16,7 @@ export const BACKEND_CONFIG = {
   RETRY_DELAY: 1000,
 } as const;
 
+// Backend API URLs
 export const BACKEND_URLS = {
   LOGIN: `${BACKEND_CONFIG.BASE_URL}/v1/login`,
   LOGIN_PREVIEW: `${BACKEND_CONFIG.BASE_URL}/v1/login/preview`,
@@ -40,6 +42,7 @@ export const BACKEND_URLS = {
   ANALYTICS_STATS: `${BACKEND_CONFIG.BASE_URL}/v1/analytics/stats`,
 } as const;
 
+// Pi Platform URLs
 export const PI_PLATFORM_URLS = {
   MAINNET: "https://api.minepi.com/v2",
   TESTNET: "https://api.testnet.minepi.com/v2",
@@ -49,6 +52,7 @@ export const PI_PLATFORM_URLS = {
   getApiUrl: () => PI_NETWORK_CONFIG.SANDBOX ? PI_PLATFORM_URLS.TESTNET : PI_PLATFORM_URLS.MAINNET,
 } as const;
 
+// Pi Blockchain URLs
 export const PI_BLOCKCHAIN_URLS = {
   GET_TRANSACTION: (txid: string) => `${BACKEND_CONFIG.BLOCKCHAIN_BASE_URL}/transactions/${txid}`,
   GET_TRANSACTION_EFFECTS: (txid: string) => `${BACKEND_CONFIG.BLOCKCHAIN_BASE_URL}/transactions/${txid}/effects`,
@@ -82,15 +86,22 @@ export async function apiRequest<T>(
     });
 
     clearTimeout(timeoutId);
-    const data = await response.json();
     
     if (!response.ok) {
+      let errorMessage = `HTTP ${response.status}`;
+      try {
+        const data = await response.json();
+        errorMessage = data.error || data.message || errorMessage;
+      } catch {
+        // Ignore JSON parse error
+      }
       return {
         success: false,
-        error: data.error || data.message || `HTTP ${response.status}`,
+        error: errorMessage,
       };
     }
 
+    const data = await response.json();
     return { success: true, data };
   } catch (error) {
     clearTimeout(timeoutId);
