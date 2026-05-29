@@ -1,10 +1,11 @@
-import { useEffect, useRef, useCallback, useLayoutEffect } from "react"
+import { useEffect, useRef, useCallback, useLayoutEffect, useState } from "react"
 
 interface UseScrollToBottomOptions {
   behavior?: "smooth" | "auto" | "instant"
   threshold?: number
   offset?: number
   enabled?: boolean
+  delay?: number
 }
 
 export const useScrollToBottom = <T extends any[]>(
@@ -15,7 +16,8 @@ export const useScrollToBottom = <T extends any[]>(
     behavior = "smooth",
     threshold = 100,
     offset = 0,
-    enabled = true
+    enabled = true,
+    delay = 50
   } = options
 
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -23,6 +25,7 @@ export const useScrollToBottom = <T extends any[]>(
   const isUserScrolledUpRef = useRef(false)
   const previousScrollHeightRef = useRef(0)
   const autoScrollTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const [isAtBottomState, setIsAtBottomState] = useState(true)
 
   const scrollToBottom = useCallback((scrollBehavior: ScrollBehavior = behavior as ScrollBehavior) => {
     if (!enabled) return
@@ -46,6 +49,8 @@ export const useScrollToBottom = <T extends any[]>(
     const handleScroll = () => {
       const { scrollTop, scrollHeight, clientHeight } = container
       const isAtBottom = scrollHeight - scrollTop - clientHeight < threshold
+      
+      setIsAtBottomState(isAtBottom)
       
       // Si l'utilisateur remonte et n'est pas en bas, on désactive l'auto-scroll
       if (!isAtBottom) {
@@ -72,13 +77,12 @@ export const useScrollToBottom = <T extends any[]>(
     // Ne pas scroll si l'utilisateur a remonté récemment
     if (isUserScrolledUpRef.current) return
     
-    // Pour les messages longs ou les images, un petit délai est utile
     const timer = setTimeout(() => {
       scrollToBottom()
-    }, 50)
+    }, delay)
 
     return () => clearTimeout(timer)
-  }, [dependencies, enabled, scrollToBottom])
+  }, [dependencies, enabled, scrollToBottom, delay])
 
   // Mémoriser la hauteur pour éviter les sauts
   useLayoutEffect(() => {
@@ -135,11 +139,12 @@ export const useScrollToBottom = <T extends any[]>(
     scrollToBottom, 
     forceScrollToBottom,
     isAtBottom,
+    isAtBottomState,
     containerRef 
   }
 }
 
-// Version simplifiée pour les cas d'usage simples (compatible avec l'original)
+// Version simplifiée pour les cas d'usage simples
 export const useSimpleScrollToBottom = <T extends any[]>(dependencies: T) => {
   const bottomRef = useRef<HTMLDivElement>(null)
 
@@ -159,6 +164,7 @@ export const useScrollActivity = () => {
   const [isScrolling, setIsScrolling] = useState(false)
   const [scrollDirection, setScrollDirection] = useState<'up' | 'down' | null>(null)
   const lastScrollTopRef = useRef(0)
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
     const handleScroll = () => {
@@ -171,8 +177,7 @@ export const useScrollActivity = () => {
       setScrollDirection(direction)
       lastScrollTopRef.current = currentScrollTop
 
-      // Reset scrolling flag after 150ms of no scroll
-      clearTimeout(scrollTimeoutRef.current)
+      if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current)
       scrollTimeoutRef.current = setTimeout(() => {
         setIsScrolling(false)
         setScrollDirection(null)
@@ -200,7 +205,10 @@ export const useScrollPosition = () => {
       if (container) {
         const { scrollTop, scrollHeight, clientHeight } = container
         setScrollPosition(scrollTop)
-        setScrollPercent((scrollTop / (scrollHeight - clientHeight)) * 100)
+        const percent = scrollHeight - clientHeight > 0 
+          ? (scrollTop / (scrollHeight - clientHeight)) * 100 
+          : 0
+        setScrollPercent(percent)
       }
     }
 
