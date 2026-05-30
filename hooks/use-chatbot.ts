@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { useLanguage } from '@/contexts/LanguageContext'  // ← Ajouter
 
 interface Message {
   id: string
@@ -24,11 +25,13 @@ const DEMO_MODE = true
 const isPiBrowser = (): boolean => {
   if (typeof window === 'undefined') return false
   const userAgent = navigator.userAgent.toLowerCase()
-  // Vérifier si l'agent utilisateur contient 'pi' ou 'pibrowser'
   return userAgent.includes('pi') || userAgent.includes('pibrowser') || !!window.Pi
 }
 
 export const useChatbot = () => {
+  // 🔥 Récupérer la langue depuis le contexte global
+  const { language: globalLanguage } = useLanguage()
+  
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [authMessage, setAuthMessage] = useState("Connexion...")
   const [piAccessToken, setPiAccessToken] = useState<string | null>(null)
@@ -42,6 +45,15 @@ export const useChatbot = () => {
   const [currentLanguage, setCurrentLanguage] = useState<'fr' | 'en' | 'pt'>('fr')
   const thinkingTimerRef = useRef<NodeJS.Timeout | null>(null)
 
+  // 🔥 Synchroniser la langue du chat avec la langue globale
+  useEffect(() => {
+    setCurrentLanguage(globalLanguage)
+    // Mettre à jour le message d'accueil
+    if (messages.length === 1 && messages[0].id === '1') {
+      setMessages([{ id: '1', text: WELCOME_MESSAGES[globalLanguage], sender: 'ai', timestamp: new Date() }])
+    }
+  }, [globalLanguage])
+
   const detectLanguage = useCallback((text: string): 'fr' | 'en' | 'pt' => {
     const textLower = text.toLowerCase()
     if (textLower.includes('bom dia') || textLower.includes('obrigado') || textLower.includes('obrigada')) return 'pt'
@@ -52,7 +64,6 @@ export const useChatbot = () => {
   // Authentification
   useEffect(() => {
     const authenticate = async () => {
-      // Mode démo - authentification automatique
       if (DEMO_MODE) {
         console.log("🏖️ Mode démo - Authentification automatique")
         setTimeout(() => {
@@ -63,7 +74,6 @@ export const useChatbot = () => {
         return
       }
 
-      // Mode réel - vérifier Pi Browser
       if (!isPiBrowser()) {
         setAuthMessage("Veuillez utiliser le Pi Browser")
         setError("Pi Browser requis")
@@ -71,14 +81,11 @@ export const useChatbot = () => {
         return
       }
 
-      // Attendre que le SDK Pi soit chargé
       let attempts = 0
       const maxAttempts = 20
       
       const checkPi = () => {
-        if (typeof window !== 'undefined' && window.Pi) {
-          return true
-        }
+        if (typeof window !== 'undefined' && window.Pi) return true
         return false
       }
       
@@ -168,13 +175,8 @@ export const useChatbot = () => {
   const sendMessage = useCallback(async () => {
     if (!input.trim() && !selectedImage) return
 
-    const userLanguage = detectLanguage(input)
-    setCurrentLanguage(userLanguage)
-
-    // Mettre à jour le message d'accueil si c'est le premier message
-    if (messages.length === 1 && messages[0].id === '1') {
-      setMessages([{ id: '1', text: WELCOME_MESSAGES[userLanguage], sender: 'ai', timestamp: new Date() }])
-    }
+    // Utiliser la langue actuelle du chat (qui suit la langue globale)
+    const userLanguage = currentLanguage
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -222,7 +224,7 @@ export const useChatbot = () => {
     } finally {
       setIsLoading(false)
     }
-  }, [input, selectedImage, detectLanguage, showThinking, hideThinking, messages.length])
+  }, [input, selectedImage, currentLanguage, showThinking, hideThinking])
 
   const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
