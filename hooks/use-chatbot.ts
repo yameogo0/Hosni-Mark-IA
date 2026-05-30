@@ -17,6 +17,9 @@ const WELCOME_MESSAGES = {
   pt: "Olá! Eu sou Hosni IA, seu assistente inteligente especializado em marketing, comércio e estratégias de crescimento.\n\nPergunte-me sobre:\n• Estratégia de marca\n• Marketing digital\n• Vendas e CRM\n• Análise de dados"
 }
 
+// 🔥 MODE DÉMO DÉSACTIVÉ - Pour les vrais paiements
+const DEMO_MODE = false
+
 export const useChatbot = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [authMessage, setAuthMessage] = useState("Connexion...")
@@ -31,27 +34,44 @@ export const useChatbot = () => {
   const [currentLanguage, setCurrentLanguage] = useState<'fr' | 'en' | 'pt'>('fr')
   const thinkingTimerRef = useRef<NodeJS.Timeout | null>(null)
 
-  // Détection automatique de la langue
   const detectLanguage = useCallback((text: string): 'fr' | 'en' | 'pt' => {
     const textLower = text.toLowerCase()
-    if (textLower.includes('bom dia') || textLower.includes('obrigado')) return 'pt'
-    if (textLower.includes('hello') || textLower.includes('thank you')) return 'en'
+    if (textLower.includes('bom dia') || textLower.includes('obrigado') || textLower.includes('obrigada')) return 'pt'
+    if (textLower.includes('hello') || textLower.includes('thank you') || textLower.includes('hi')) return 'en'
     return 'fr'
   }, [])
 
-  // Connexion automatique en mode démo
+  // Authentification réelle (pas de mode démo)
   useEffect(() => {
-    const timer = setTimeout(() => {
-      console.log("🏖️ Mode démo - Authentification automatique")
-      setPiAccessToken("demo_token_" + Date.now())
-      setIsAuthenticated(true)
-      setAuthMessage("✅ Connecté")
-    }, 500)
-
-    return () => clearTimeout(timer)
+    const authenticate = async () => {
+      try {
+        if (typeof window !== 'undefined' && window.Pi) {
+          setAuthMessage("Authentification Pi...")
+          await window.Pi.init({ version: "2.0", sandbox: false })
+          
+          const auth = await window.Pi.authenticate(
+            ['username', 'wallet_address', 'payments'],
+            (payment: any) => console.log('Paiement incomplet:', payment)
+          )
+          
+          if (auth && auth.accessToken) {
+            setPiAccessToken(auth.accessToken)
+            setIsAuthenticated(true)
+            setAuthMessage(`✅ Connecté: ${auth.user?.username}`)
+          }
+        } else {
+          setAuthMessage("Veuillez utiliser le Pi Browser")
+        }
+      } catch (err) {
+        console.error(err)
+        setError("Erreur de connexion")
+        setAuthMessage("❌ Échec de connexion")
+      }
+    }
+    
+    authenticate()
   }, [])
 
-  // Afficher le message "réflexion..."
   const showThinking = useCallback(() => {
     const thinkingMessage: Message = {
       id: 'thinking',
@@ -63,20 +83,23 @@ export const useChatbot = () => {
     }
     setMessages(prev => [...prev, thinkingMessage])
 
-    let seconds = 0
+    let dots = 0
     thinkingTimerRef.current = setInterval(() => {
-      seconds += 1
+      dots = (dots + 1) % 4
+      const dotText = '.'.repeat(dots)
       setMessages(prevMessages =>
         prevMessages.map(msg =>
           msg.id === 'thinking'
-            ? { ...msg, text: `${currentLanguage === 'fr' ? 'Réflexion' : currentLanguage === 'pt' ? 'Pensando' : 'Thinking'}... (${seconds}s)` }
+            ? { 
+                ...msg, 
+                text: `${currentLanguage === 'fr' ? 'Réflexion' : currentLanguage === 'pt' ? 'Pensando' : 'Thinking'}${dotText}`
+              }
             : msg
         )
       )
-    }, 1000)
+    }, 500)
   }, [currentLanguage])
 
-  // Cacher le message "réflexion..."
   const hideThinking = useCallback(() => {
     if (thinkingTimerRef.current) {
       clearInterval(thinkingTimerRef.current)
@@ -85,14 +108,16 @@ export const useChatbot = () => {
     setMessages(prev => prev.filter(msg => msg.id !== 'thinking'))
   }, [])
 
-  // Envoyer un message
   const sendMessage = useCallback(async () => {
     if (!input.trim() && !selectedImage) return
 
     const userLanguage = detectLanguage(input)
     setCurrentLanguage(userLanguage)
 
-    // Message utilisateur
+    if (messages.length === 1 && messages[0].id === '1') {
+      setMessages([{ id: '1', text: WELCOME_MESSAGES[userLanguage], sender: 'ai', timestamp: new Date() }])
+    }
+
     const userMessage: Message = {
       id: Date.now().toString(),
       text: input.trim() || (selectedImage ? "📷 Analyse d'image" : ""),
@@ -105,7 +130,6 @@ export const useChatbot = () => {
     showThinking()
 
     try {
-      // Appel à l'API Groq
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -121,7 +145,7 @@ export const useChatbot = () => {
 
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
-        text: data.response || "❌ Désolé, une erreur s'est produite. Veuillez réessayer.",
+        text: data.response || "❌ Désolé, une erreur s'est produite.",
         sender: 'ai',
         timestamp: new Date()
       }
@@ -140,7 +164,7 @@ export const useChatbot = () => {
     } finally {
       setIsLoading(false)
     }
-  }, [input, selectedImage, detectLanguage, showThinking, hideThinking])
+  }, [input, selectedImage, detectLanguage, showThinking, hideThinking, messages.length])
 
   const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -161,7 +185,6 @@ export const useChatbot = () => {
     setSelectedImage(null)
   }, [])
 
-  // Nettoyage
   useEffect(() => {
     return () => {
       if (thinkingTimerRef.current) clearInterval(thinkingTimerRef.current)
