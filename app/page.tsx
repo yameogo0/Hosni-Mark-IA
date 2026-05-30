@@ -15,6 +15,8 @@ import { APP_CONFIG, COLORS } from "@/lib/app-config"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useToast } from "@/hooks/use-toast"
 import { usePiWallet } from "@/hooks/use-pi-wallet"
+import { LanguageSelector } from "@/components/LanguageSelector"
+import { useLanguage } from "@/contexts/LanguageContext"
 
 // Chargement dynamique des composants lourds
 const WelcomeMessage = dynamic(() => import("@/components/welcome-message").then(mod => mod.WelcomeMessage), { ssr: false })
@@ -43,6 +45,7 @@ export default function ChatBot() {
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false)
   const [isPiSDKReady, setIsPiSDKReady] = useState(false)
   const { toast } = useToast()
+  const { language, setLanguage, t } = useLanguage()
   
   const chatbot = useChatbot()
   const subscriptionStatus = useSubscriptionStatus()
@@ -91,21 +94,21 @@ export default function ChatBot() {
   const handleSubscribeClick = useCallback(async () => {
     if (!isPiAuthenticated) {
       toast({
-        title: "Wallet requis",
-        description: "Veuillez d'abord connecter votre wallet Pi dans les paramètres.",
+        title: t('subscriptionRequired'),
+        description: t('connectWalletFirst'),
       })
       return
     }
     setIsPaymentModalOpen(true)
-  }, [isPiAuthenticated, toast])
+  }, [isPiAuthenticated, toast, t])
 
   const handlePaymentSuccess = useCallback(() => {
     toast({
-      title: "🎉 Abonnement activé!",
-      description: "Vous avez maintenant accès à toutes les fonctionnalités premium.",
+      title: t('subscriptionActivated'),
+      description: t('premiumAccess'),
     })
     setTimeout(() => window.location.reload(), 1500)
-  }, [toast])
+  }, [toast, t])
 
   const hasPremiumAccess = useCallback(() => {
     if (typeof window === 'undefined') return false
@@ -141,10 +144,10 @@ export default function ChatBot() {
             {APP_CONFIG.NAME}
           </div>
           <div className="text-sm text-muted-foreground max-w-sm mx-auto leading-relaxed">
-            Votre Expert en Marketing & Commerce 24/7
+            {t('expertTitle')}
           </div>
           <div className={`text-base mt-6 ${error ? 'text-destructive' : 'text-foreground'}`}>
-            {error || authMessage || "Connexion en cours..."}
+            {error || authMessage || t('connecting')}
           </div>
           {!error && (
             <div className="flex justify-center">
@@ -157,7 +160,7 @@ export default function ChatBot() {
               style={{ backgroundColor: COLORS.PRIMARY }}
               onClick={() => window.location.reload()}
             >
-              Réessayer
+              {t('retry')}
             </Button>
           )}
         </div>
@@ -182,14 +185,21 @@ export default function ChatBot() {
                   </span>
                 )}
               </div>
-              <Link href="/settings">
-                <Button variant="ghost" size="icon" className="text-white hover:bg-white/10">
-                  <WalletIcon className="w-5 h-5" />
-                </Button>
-              </Link>
+              <div className="flex items-center gap-2">
+                <LanguageSelector 
+                  currentLang={language} 
+                  onLanguageChange={setLanguage}
+                  showLabel={false}
+                />
+                <Link href="/settings">
+                  <Button variant="ghost" size="icon" className="text-white hover:bg-white/10">
+                    <WalletIcon className="w-5 h-5" />
+                  </Button>
+                </Link>
+              </div>
             </div>
             <div className="text-xs opacity-90 mt-2 font-normal">
-              Expert en Marketing, Commerce & Stratégies de Croissance
+              {t('expertTitle')}
             </div>
           </CardTitle>
         </CardHeader>
@@ -258,7 +268,7 @@ export default function ChatBot() {
                 <div className="flex items-center gap-2">
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription className="text-xs">
-                    Limite quotidienne atteinte • {subscriptionStatus.questionsLimit} questions/jour
+                    {t('dailyLimitReached')} • {subscriptionStatus.questionsLimit} {t('questionsPerDay')}
                   </AlertDescription>
                 </div>
                 <Button
@@ -268,7 +278,7 @@ export default function ChatBot() {
                   onClick={handleSubscribeClick}
                 >
                   <Crown className="w-3 h-3 mr-1" />
-                  Premium
+                  {t('upgrade')}
                 </Button>
               </div>
             </Alert>
@@ -284,7 +294,7 @@ export default function ChatBot() {
               />
               {selectedImage && (
                 <span className="text-[10px] text-muted-foreground truncate flex-1">
-                  🖼️ Image prête à analyser
+                  🖼️ {t('imageReady')}
                 </span>
               )}
             </div>
@@ -297,8 +307,8 @@ export default function ChatBot() {
               onKeyPress={handleKeyPress}
               placeholder={
                 subscriptionStatus.hasImageAccess && selectedImage
-                  ? "Décrivez ce que vous voulez analyser..."
-                  : "Posez votre question marketing..."
+                  ? t('describeImage')
+                  : t('askQuestion')
               }
               disabled={isLoading || (!subscriptionStatus.canAskQuestion && !isPremium)}
               className="flex-1 border-2 focus-visible:ring-primary"
@@ -319,16 +329,16 @@ export default function ChatBot() {
           </div>
           
           <div className="text-[10px] text-muted-foreground text-center w-full space-x-2">
-            <span>⚡ Propulsé par Pi Network</span>
+            <span>⚡ {t('poweredBy')}</span>
             <span>•</span>
-            <span>🔒 Paiements sécurisés</span>
+            <span>🔒 {t('securePayments')}</span>
             <span>•</span>
             <Link href="/settings" className="underline hover:text-foreground">
-              ⚙️ Wallet
+              ⚙️ {t('wallet')}
             </Link>
             <span>•</span>
             <Link href="/diagnostic" className="underline hover:text-foreground">
-              📊 Diagnostic
+              📊 {t('diagnostic')}
             </Link>
           </div>
         </CardFooter>
