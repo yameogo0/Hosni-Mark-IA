@@ -1,8 +1,10 @@
 'use client';
 
 import { useQuestionLimit } from '@/hooks/use-subscription-status';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export function QuestionLimitDisplay() {
+  const { t } = useLanguage();
   const { remaining, percentage, isPremium } = useQuestionLimit();
 
   if (isPremium) {
@@ -15,7 +17,7 @@ export function QuestionLimitDisplay() {
   return (
     <div className="mt-2">
       <div className="flex justify-between text-xs text-muted-foreground mb-1">
-        <span>Questions restantes</span>
+        <span>{t('questionsRemaining')}</span>
         <span className={isLow ? 'text-orange-500 font-semibold' : ''}>
           {remaining} / 10
         </span>
@@ -30,7 +32,7 @@ export function QuestionLimitDisplay() {
       </div>
       {isZero && (
         <p className="text-xs text-red-500 mt-1">
-          Limite atteinte. Passez au premium pour continuer.
+          {t('limitReachedUpgrade')}
         </p>
       )}
     </div>
