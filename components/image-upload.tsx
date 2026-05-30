@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { ImageIcon, X, Upload, AlertCircle, Loader2 } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { useLanguage } from "@/contexts/LanguageContext"
 
 interface ImageUploadProps {
   onImageSelect: (file: File, preview: string) => void;
@@ -26,6 +27,7 @@ export function ImageUpload({
   maxSizeMB = 5,
   acceptedTypes = ACCEPTED_TYPES
 }: ImageUploadProps) {
+  const { t } = useLanguage()
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -37,25 +39,24 @@ export function ImageUpload({
 
     // Vérifier le type
     if (!acceptedTypes.includes(file.type)) {
-      setError(`Format non supporté. Types acceptés: ${acceptedTypes.map(t => t.split('/')[1]).join(', ')}`);
+      setError(t('invalidFormat').replace('{formats}', acceptedTypes.map(t => t.split('/')[1]).join(', ')));
       return false;
     }
 
     // Vérifier la taille
     if (file.size > maxSizeBytes) {
-      setError(`Image trop volumineuse. Taille max: ${maxSizeMB}MB`);
+      setError(t('fileTooLarge').replace('{size}', maxSizeMB.toString()));
       return false;
     }
 
     return true;
-  }, [acceptedTypes, maxSizeBytes, maxSizeMB]);
+  }, [acceptedTypes, maxSizeBytes, maxSizeMB, t]);
 
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     if (!validateFile(file)) {
-      // Reset input
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -71,11 +72,11 @@ export function ImageUpload({
       setError(null);
     };
     reader.onerror = () => {
-      setError("Erreur lors de la lecture de l'image");
+      setError(t('imageReadError'));
       setIsLoading(false);
     };
     reader.readAsDataURL(file);
-  }, [onImageSelect, validateFile]);
+  }, [onImageSelect, validateFile, t]);
 
   const handleClick = useCallback(() => {
     fileInputRef.current?.click();
@@ -100,7 +101,7 @@ export function ImageUpload({
         <div className="relative group">
           <img 
             src={selectedImage.preview || "/placeholder.svg"} 
-            alt="Aperçu de l'image sélectionnée" 
+            alt={t('imagePreviewAlt')} 
             className="w-full h-24 object-cover rounded"
           />
           <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded flex items-center justify-center">
@@ -110,7 +111,7 @@ export function ImageUpload({
               className="h-8 w-8 rounded-full"
               onClick={handleRemove}
             >
-              <X className="h-4 w-4" />
+              <X className="w-4 h-4" />
             </Button>
           </div>
         </div>
@@ -141,13 +142,13 @@ export function ImageUpload({
       >
         {isLoading ? (
           <>
-            <Loader2 className="h-4 w-4 animate-spin" />
-            <span className="text-xs">Chargement...</span>
+            <Loader2 className="w-4 h-4 animate-spin" />
+            <span className="text-xs">{t('loading')}</span>
           </>
         ) : (
           <>
-            <ImageIcon className="h-4 w-4" />
-            <span className="text-xs">Ajouter une image</span>
+            <ImageIcon className="w-4 h-4" />
+            <span className="text-xs">{t('addImage')}</span>
           </>
         )}
       </Button>
@@ -162,7 +163,7 @@ export function ImageUpload({
       )}
 
       <p className="text-[10px] text-muted-foreground">
-        Formats: {acceptedTypes.map(t => t.split('/')[1]).join(', ')} • Max: {maxSizeMB}MB
+        {t('formatsInfo').replace('{formats}', acceptedTypes.map(t => t.split('/')[1]).join(', ')).replace('{size}', maxSizeMB.toString())}
       </p>
     </div>
   );
