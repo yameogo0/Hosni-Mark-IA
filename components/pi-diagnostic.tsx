@@ -22,6 +22,7 @@ import {
 } from "lucide-react"
 import { PI_NETWORK_CONFIG, BACKEND_CONFIG } from "@/lib/system-config"
 import { useToast } from "@/hooks/use-toast"
+import { useLanguage } from "@/contexts/LanguageContext"
 
 interface DiagnosticResult {
   name: string
@@ -39,6 +40,7 @@ interface DiagnosticSummary {
 }
 
 export function PiDiagnostic() {
+  const { t } = useLanguage()
   const [results, setResults] = useState<DiagnosticResult[]>([])
   const [isChecking, setIsChecking] = useState(false)
   const [progress, setProgress] = useState(0)
@@ -65,10 +67,10 @@ export function PiDiagnostic() {
       checking: "bg-blue-100 text-blue-700 hover:bg-blue-100"
     }
     const labels: Record<string, string> = {
-      success: "OK",
-      error: "ERREUR",
-      warning: "ATTENTION",
-      checking: "VÉRIFICATION"
+      success: t('statusOk'),
+      error: t('statusError'),
+      warning: t('statusWarning'),
+      checking: t('statusChecking')
     }
     return (
       <Badge className={variants[status]}>
@@ -89,14 +91,14 @@ export function PiDiagnostic() {
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text)
     toast({
-      title: "Copié !",
-      description: "Les informations ont été copiées dans le presse-papier",
+      title: t('copied'),
+      description: t('copiedDescription'),
     })
   }
 
   const copyFullReport = () => {
     const report = results.map(r => 
-      `[${r.status.toUpperCase()}] ${r.name}: ${r.message}${r.details ? `\n    Détails: ${r.details}` : ''}`
+      `[${r.status.toUpperCase()}] ${r.name}: ${r.message}${r.details ? `\n    ${t('details')}: ${r.details}` : ''}`
     ).join('\n')
     copyToClipboard(report)
   }
@@ -110,11 +112,11 @@ export function PiDiagnostic() {
     setProgress(10)
     await new Promise(r => setTimeout(r, 100))
     diagnosticResults.push({
-      name: "SDK Pi Network",
+      name: t('sdkName'),
       status: typeof window !== "undefined" && (window as any).Pi ? "success" : "error",
       message: typeof window !== "undefined" && (window as any).Pi 
-        ? "SDK Pi est chargé et disponible" 
-        : "SDK Pi non disponible. Vérifiez que l'app s'exécute dans Pi Browser.",
+        ? t('sdkAvailable') 
+        : t('sdkUnavailable'),
       details: `SDK URL: ${PI_NETWORK_CONFIG.SDK_URL}`,
       icon: <Wallet className="w-4 h-4" />
     })
@@ -123,11 +125,11 @@ export function PiDiagnostic() {
     setProgress(20)
     await new Promise(r => setTimeout(r, 100))
     diagnosticResults.push({
-      name: "Mode Sandbox",
+      name: t('sandboxMode'),
       status: PI_NETWORK_CONFIG.SANDBOX ? "warning" : "success",
       message: PI_NETWORK_CONFIG.SANDBOX 
-        ? "Mode Sandbox activé (transactions simulées)" 
-        : "Mode Production activé (transactions réelles)",
+        ? t('sandboxActive') 
+        : t('productionActive'),
       details: `SANDBOX: ${PI_NETWORK_CONFIG.SANDBOX}`,
       icon: <Shield className="w-4 h-4" />
     })
@@ -136,12 +138,12 @@ export function PiDiagnostic() {
     setProgress(30)
     await new Promise(r => setTimeout(r, 100))
     diagnosticResults.push({
-      name: "Backend URL",
+      name: t('backendUrl'),
       status: BACKEND_CONFIG.BASE_URL ? "success" : "error",
       message: BACKEND_CONFIG.BASE_URL 
-        ? "Backend URL configurée" 
-        : "Backend URL manquante",
-      details: `Base URL: ${BACKEND_CONFIG.BASE_URL || 'Non définie'}`,
+        ? t('backendConfigured') 
+        : t('backendMissing'),
+      details: `Base URL: ${BACKEND_CONFIG.BASE_URL || t('notDefined')}`,
       icon: <Server className="w-4 h-4" />
     })
 
@@ -150,12 +152,12 @@ export function PiDiagnostic() {
     await new Promise(r => setTimeout(r, 100))
     const hasApiKey = !!process.env.NEXT_PUBLIC_GROQ_API_KEY || !!process.env.GROQ_API_KEY
     diagnosticResults.push({
-      name: "Clé API",
+      name: t('apiKey'),
       status: hasApiKey ? "success" : "error",
       message: hasApiKey 
-        ? "Clé API configurée" 
-        : "Clé API manquante (GROQ_API_KEY)",
-      details: "Nécessaire pour le chat IA",
+        ? t('apiKeyConfigured') 
+        : t('apiKeyMissing'),
+      details: t('apiKeyRequired'),
       icon: <Key className="w-4 h-4" />
     })
 
@@ -168,20 +170,20 @@ export function PiDiagnostic() {
       })
       
       diagnosticResults.push({
-        name: "Backend Accessibilité",
+        name: t('backendAccess'),
         status: response.ok ? "success" : "error",
         message: response.ok 
-          ? `Backend répond (${response.status})` 
-          : `Backend inaccessible (${response.status})`,
+          ? t('backendResponds').replace('{status}', response.status.toString())
+          : t('backendInaccessible').replace('{status}', response.status.toString()),
         details: `Endpoint: ${BACKEND_CONFIG.BASE_URL}/health`,
         icon: <Globe className="w-4 h-4" />
       })
     } catch (error) {
       diagnosticResults.push({
-        name: "Backend Accessibilité",
+        name: t('backendAccess'),
         status: "error",
-        message: "Impossible de contacter le backend",
-        details: error instanceof Error ? error.message : "Erreur inconnue",
+        message: t('backendUnreachable'),
+        details: error instanceof Error ? error.message : t('unknownError'),
         icon: <Globe className="w-4 h-4" />
       })
     }
@@ -192,29 +194,29 @@ export function PiDiagnostic() {
       try {
         const auth = await (window as any).Pi.authenticate([], () => {})
         diagnosticResults.push({
-          name: "Authentification Pi",
+          name: t('piAuth'),
           status: auth && auth.accessToken ? "success" : "error",
           message: auth && auth.accessToken 
-            ? "Authentification réussie" 
-            : "Échec de l'authentification",
-          details: auth?.user?.uid ? `User ID: ${auth.user.uid}` : "Non authentifié",
+            ? t('authSuccess') 
+            : t('authFailed'),
+          details: auth?.user?.uid ? `User ID: ${auth.user.uid}` : t('notAuthenticated'),
           icon: <Shield className="w-4 h-4" />
         })
       } catch (error) {
         diagnosticResults.push({
-          name: "Authentification Pi",
+          name: t('piAuth'),
           status: "error",
-          message: "Erreur d'authentification",
-          details: error instanceof Error ? error.message : "Erreur inconnue",
+          message: t('authError'),
+          details: error instanceof Error ? error.message : t('unknownError'),
           icon: <Shield className="w-4 h-4" />
         })
       }
     } else {
       diagnosticResults.push({
-        name: "Authentification Pi",
+        name: t('piAuth'),
         status: "warning",
-        message: "Impossible de vérifier l'authentification",
-        details: "SDK Pi non disponible",
+        message: t('authImpossible'),
+        details: t('sdkUnavailableDetail'),
         icon: <Shield className="w-4 h-4" />
       })
     }
@@ -226,18 +228,18 @@ export function PiDiagnostic() {
       await fetch(`${BACKEND_CONFIG.BASE_URL}/health`, { signal: AbortSignal.timeout(3000) })
       const latency = Math.round(performance.now() - startTime)
       diagnosticResults.push({
-        name: "Latence",
+        name: t('latency'),
         status: latency < 500 ? "success" : latency < 2000 ? "warning" : "error",
-        message: `Latence: ${latency}ms`,
-        details: latency < 500 ? "Bonnes performances" : latency < 2000 ? "Performances moyennes" : "Latence élevée",
+        message: t('latencyValue').replace('{latency}', latency.toString()),
+        details: latency < 500 ? t('goodPerformance') : latency < 2000 ? t('averagePerformance') : t('highLatency'),
         icon: <Clock className="w-4 h-4" />
       })
     } catch {
       diagnosticResults.push({
-        name: "Latence",
+        name: t('latency'),
         status: "error",
-        message: "Impossible de mesurer la latence",
-        details: "Backend inaccessible",
+        message: t('latencyImpossible'),
+        details: t('backendInaccessibleDetail'),
         icon: <Clock className="w-4 h-4" />
       })
     }
@@ -245,7 +247,7 @@ export function PiDiagnostic() {
     setProgress(100)
     setResults(diagnosticResults)
     setIsChecking(false)
-  }, [])
+  }, [t])
 
   useEffect(() => {
     runDiagnostics()
@@ -260,7 +262,7 @@ export function PiDiagnostic() {
         <CardTitle className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <span className="flex items-center gap-2">
             <Shield className="w-5 h-5 text-primary" />
-            Diagnostic Pi Network
+            {t('diagnosticTitle')}
           </span>
           <div className="flex gap-2">
             <Button
@@ -270,7 +272,7 @@ export function PiDiagnostic() {
               disabled={isChecking || results.length === 0}
             >
               <Copy className="w-4 h-4 mr-2" />
-              Copier rapport
+              {t('copyReport')}
             </Button>
             <Button
               variant="outline"
@@ -281,12 +283,12 @@ export function PiDiagnostic() {
               {isChecking ? (
                 <>
                   <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                  Vérification...
+                  {t('checking')}
                 </>
               ) : (
                 <>
                   <RefreshCw className="w-4 h-4 mr-2" />
-                  Relancer
+                  {t('restart')}
                 </>
               )}
             </Button>
@@ -299,7 +301,7 @@ export function PiDiagnostic() {
           <div className="space-y-2">
             <Progress value={progress} className="h-2" />
             <p className="text-xs text-muted-foreground text-center">
-              Vérification en cours... {Math.round(progress)}%
+              {t('checkingProgress')} {Math.round(progress)}%
             </p>
           </div>
         )}
@@ -309,15 +311,15 @@ export function PiDiagnostic() {
           <div className="grid grid-cols-3 gap-2 text-center">
             <div className="p-2 rounded-lg bg-green-50">
               <p className="text-2xl font-bold text-green-600">{summary.success}</p>
-              <p className="text-xs text-green-700">OK</p>
+              <p className="text-xs text-green-700">{t('ok')}</p>
             </div>
             <div className="p-2 rounded-lg bg-yellow-50">
               <p className="text-2xl font-bold text-yellow-600">{summary.warnings}</p>
-              <p className="text-xs text-yellow-700">Alertes</p>
+              <p className="text-xs text-yellow-700">{t('warnings')}</p>
             </div>
             <div className="p-2 rounded-lg bg-red-50">
               <p className="text-2xl font-bold text-red-600">{summary.errors}</p>
-              <p className="text-xs text-red-700">Erreurs</p>
+              <p className="text-xs text-red-700">{t('errors')}</p>
             </div>
           </div>
         )}
@@ -326,7 +328,7 @@ export function PiDiagnostic() {
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              Des erreurs ont été détectées. Consultez les recommandations ci-dessous.
+              {t('errorsDetected')}
             </AlertDescription>
           </Alert>
         )}
@@ -370,20 +372,20 @@ export function PiDiagnostic() {
 
         {/* Actions Recommandées */}
         <div className="pt-4 border-t space-y-3">
-          <h4 className="font-semibold text-sm">Actions Recommandées</h4>
+          <h4 className="font-semibold text-sm">{t('recommendedActions')}</h4>
           
           {hasErrors && (
             <Alert>
               <AlertCircle className="h-4 w-4" />
               <AlertDescription className="space-y-2">
                 <p className="font-semibold">
-                  Solutions pour les erreurs courantes :
+                  {t('commonSolutions')}
                 </p>
                 <ol className="list-decimal list-inside space-y-1 text-xs">
-                  <li>Assurez-vous d'être dans le <strong>Pi Browser</strong> (pas Chrome/Safari)</li>
-                  <li>Vérifiez votre connexion internet</li>
-                  <li>Videz le cache du navigateur</li>
-                  <li>Reconnectez votre wallet Pi</li>
+                  <li>{t('solution1')}</li>
+                  <li>{t('solution2')}</li>
+                  <li>{t('solution3')}</li>
+                  <li>{t('solution4')}</li>
                 </ol>
               </AlertDescription>
             </Alert>
@@ -397,7 +399,7 @@ export function PiDiagnostic() {
               onClick={() => window.open("https://develop.pi", "_blank")}
             >
               <ExternalLink className="w-4 h-4 mr-2" />
-              Ouvrir Pi Developer Portal
+              {t('openDevPortal')}
             </Button>
             <Button
               variant="outline"
@@ -406,7 +408,7 @@ export function PiDiagnostic() {
               onClick={() => window.open("/settings", "_blank")}
             >
               <ExternalLink className="w-4 h-4 mr-2" />
-              Configurer le Wallet
+              {t('configureWallet')}
             </Button>
           </div>
         </div>
@@ -415,14 +417,14 @@ export function PiDiagnostic() {
         <div className="pt-3 border-t">
           <details className="text-xs text-muted-foreground">
             <summary className="cursor-pointer font-semibold mb-2">
-              Informations Système
+              {t('systemInfo')}
             </summary>
             <div className="space-y-1 pl-4">
               <p>• User Agent: {typeof navigator !== "undefined" ? navigator.userAgent : "N/A"}</p>
               <p>• SDK URL: {PI_NETWORK_CONFIG.SDK_URL}</p>
               <p>• Backend: {BACKEND_CONFIG.BASE_URL}</p>
-              <p>• Mode: {PI_NETWORK_CONFIG.SANDBOX ? "Sandbox" : "Production"}</p>
-              <p>• Dernier diagnostic: {new Date().toLocaleString()}</p>
+              <p>• Mode: {PI_NETWORK_CONFIG.SANDBOX ? t('sandbox') : t('production')}</p>
+              <p>• {t('lastDiagnostic')}: {new Date().toLocaleString()}</p>
             </div>
           </details>
         </div>
