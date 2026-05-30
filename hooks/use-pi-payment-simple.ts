@@ -2,8 +2,8 @@
 
 import { useState, useCallback } from 'react'
 
-// 🔥 Mode simulation - Désactivé pour les vrais paiements
-const SIMULATION_MODE = false
+// 🔥 Mode simulation - Activer pour éviter le vrai paiement et le compte à rebours
+const SIMULATION_MODE = true
 
 export function usePiPaymentSimple() {
   const [isProcessing, setIsProcessing] = useState(false)
@@ -13,17 +13,45 @@ export function usePiPaymentSimple() {
   const initiatePayment = useCallback(async (config: any) => {
     setIsProcessing(true)
     setError(null)
-    setPaymentStatus('🔄 Création du paiement...')
+    setPaymentStatus('🔄 Activation...')
 
     try {
-      // Vérifier que le SDK Pi est disponible
+      // 🔥 MODE SIMULATION - Pas de compte à rebours, succès immédiat
+      if (SIMULATION_MODE) {
+        console.log('🏖️ Mode simulation - Paiement simulé pour:', config.planId)
+        
+        // Petit délai pour l'effet visuel (sans compte à rebours)
+        await new Promise(resolve => setTimeout(resolve, 800))
+        
+        const durationDays = config.planId === 'pro_weekly' ? 7 : 30
+        const expiresAt = new Date()
+        expiresAt.setDate(expiresAt.getDate() + durationDays)
+        
+        const subscriptionData = {
+          planId: config.planId,
+          active: true,
+          activatedAt: new Date().toISOString(),
+          expiresAt: expiresAt.toISOString()
+        }
+        
+        localStorage.setItem('hinos_subscription', JSON.stringify(subscriptionData))
+        setPaymentStatus('✅ Abonnement activé !')
+        
+        return { 
+          success: true, 
+          subscription: subscriptionData,
+          paymentId: 'sim_' + Date.now(),
+          txid: 'sim_tx_' + Date.now()
+        }
+      }
+
+      // 🔥 MODE RÉEL - (désactivé car SIMULATION_MODE = true)
       if (typeof window === 'undefined' || !window.Pi) {
         throw new Error('Pi SDK non disponible. Veuillez utiliser le Pi Browser.')
       }
 
       console.log('💰 Début du paiement réel pour:', config.planId)
 
-      // Créer le paiement avec Pi SDK
       const paymentPromise = new Promise((resolve, reject) => {
         window.Pi.createPayment(
           {
@@ -32,7 +60,6 @@ export function usePiPaymentSimple() {
             metadata: { planId: config.planId }
           },
           {
-            // Phase I: Server-Side Approval
             onReadyForServerApproval: async (paymentId: string) => {
               console.log("📝 Approbation serveur:", paymentId)
               setPaymentStatus('Approbation en cours...')
@@ -56,7 +83,6 @@ export function usePiPaymentSimple() {
               }
             },
             
-            // Phase III: Server-Side Completion
             onReadyForServerCompletion: async (paymentId: string, txid: string) => {
               console.log("📝 Finalisation:", paymentId, txid)
               setPaymentStatus('Finalisation en cours...')
