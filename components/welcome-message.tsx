@@ -19,6 +19,7 @@ import {
 } from "lucide-react"
 import { useState } from "react"
 import { COLORS } from "@/lib/app-config"
+import { useLanguage } from "@/contexts/LanguageContext"
 
 interface WelcomeMessageProps {
   onStartChat?: () => void
@@ -26,53 +27,54 @@ interface WelcomeMessageProps {
 }
 
 export function WelcomeMessage({ onStartChat, showExamples = true }: WelcomeMessageProps) {
+  const { t } = useLanguage()
   const [showAllFeatures, setShowAllFeatures] = useState(false)
 
   const mainFeatures = [
     {
       icon: Lightbulb,
-      title: "Conseils Stratégiques",
-      items: ["Stratégie de marque", "Études de marché", "Positionnement"],
+      title: t('strategicAdvice'),
+      items: [t('brandStrategy'), t('marketResearch'), t('positioning')],
       color: "from-amber-500 to-orange-500"
     },
     {
       icon: Megaphone,
-      title: "Marketing Numérique",
-      items: ["Social Media", "SEO", "Publicités en ligne", "Marketing de contenu"],
+      title: t('digitalMarketing'),
+      items: [t('socialMedia'), t('seo'), t('onlineAds'), t('contentMarketing')],
       color: "from-blue-500 to-cyan-500"
     },
     {
       icon: ShoppingCart,
-      title: "Vente & CRM",
-      items: ["Techniques de vente", "Fidélisation client", "Gestion relation client"],
+      title: t('salesCRM'),
+      items: [t('salesTechniques'), t('customerLoyalty'), t('crmManagement')],
       color: "from-green-500 to-emerald-500"
     },
     {
       icon: BarChart3,
-      title: "Analyse",
-      items: ["Interprétation de données", "KPI", "Mesure de performance"],
+      title: t('analysis'),
+      items: [t('dataInterpretation'), t('kpi'), t('performanceMeasurement')],
       color: "from-purple-500 to-pink-500"
     },
     {
       icon: Rocket,
-      title: "Innovation",
-      items: ["Tendances", "E-commerce", "Nouvelles technologies"],
+      title: t('innovation'),
+      items: [t('trends'), t('ecommerce'), t('newTechnologies')],
       color: "from-red-500 to-rose-500"
     }
   ]
 
   const additionalFeatures = [
-    { icon: TrendingUp, title: "Croissance", description: "Stratégies d'expansion" },
-    { icon: Users, title: "Community", description: "Gestion de communauté" },
-    { icon: Target, title: "Ciblage", description: "Segmentation avancée" },
-    { icon: Star, title: "Branding", description: "Identité de marque" }
+    { icon: TrendingUp, title: t('growth'), description: t('expansionStrategies') },
+    { icon: Users, title: t('community'), description: t('communityManagement') },
+    { icon: Target, title: t('targeting'), description: t('advancedSegmentation') },
+    { icon: Star, title: t('branding'), description: t('brandIdentity') }
   ]
 
   const exampleQuestions = [
-    "Comment lancer une campagne Facebook Ads efficace ?",
-    "Quelles sont les meilleures stratégies de fidélisation ?",
-    "Comment analyser mes KPIs marketing ?",
-    "Stratégies pour augmenter mes ventes en ligne"
+    t('question1'),
+    t('question2'),
+    t('question3'),
+    t('question4')
   ]
 
   const displayedFeatures = showAllFeatures ? [...mainFeatures, ...additionalFeatures.map(f => ({
@@ -88,14 +90,13 @@ export function WelcomeMessage({ onStartChat, showExamples = true }: WelcomeMess
       <div className="text-center space-y-3">
         <div className="inline-flex items-center gap-1 bg-primary/10 px-3 py-1 rounded-full">
           <Sparkles className="w-3 h-3 text-primary" />
-          <span className="text-[10px] font-medium text-primary">IA avancée</span>
+          <span className="text-[10px] font-medium text-primary">{t('advancedAI')}</span>
         </div>
         <h2 className="text-xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
-          Votre Expert en Marketing & Commerce
+          {t('expertTitle')}
         </h2>
         <p className="text-xs text-muted-foreground leading-relaxed max-w-md mx-auto">
-          Transformez votre vision commerciale en succès concret avec des analyses, 
-          conseils personnalisés et solutions innovantes.
+          {t('heroDescription')}
         </p>
       </div>
 
@@ -104,8 +105,8 @@ export function WelcomeMessage({ onStartChat, showExamples = true }: WelcomeMess
         <CardHeader className="pb-2">
           <CardTitle className="text-sm text-center flex items-center justify-center gap-2">
             <Star className="w-4 h-4 text-primary" />
-            Fonctionnalités Clés
-            <Badge variant="outline" className="text-[9px]">5 domaines</Badge>
+            {t('keyFeatures')}
+            <Badge variant="outline" className="text-[9px]">5 {t('domains')}</Badge>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -137,7 +138,7 @@ export function WelcomeMessage({ onStartChat, showExamples = true }: WelcomeMess
           <CardHeader className="pb-2">
             <CardTitle className="text-xs text-center flex items-center justify-center gap-2">
               <MessageCircle className="w-3 h-3 text-primary" />
-              Questions fréquentes
+              {t('frequentQuestions')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -167,20 +168,20 @@ export function WelcomeMessage({ onStartChat, showExamples = true }: WelcomeMess
           style={{ backgroundColor: COLORS.PRIMARY }}
         >
           <MessageCircle className="w-4 h-4 mr-2" />
-          Commencer votre consultation
+          {t('startConsultation')}
           <ArrowRight className="w-4 h-4 ml-2" />
         </Button>
       )}
 
       {/* Footer */}
       <p className="text-[10px] text-center text-muted-foreground italic">
-        🤖 Disponible pour entrepreneurs, marketeurs et chefs d&apos;entreprise
+        🤖 {t('availableFor')}
       </p>
 
       {/* Analytics Note */}
       <div className="text-center">
         <p className="text-[9px] text-muted-foreground">
-          💡 Tous les conseils sont personnalisés selon votre secteur d&apos;activité
+          💡 {t('personalizedAdviceNote')}
         </p>
       </div>
     </div>
@@ -189,6 +190,8 @@ export function WelcomeMessage({ onStartChat, showExamples = true }: WelcomeMess
 
 // Version simplifiée pour l'affichage rapide
 export function SimpleWelcomeMessage() {
+  const { t } = useLanguage()
+  
   return (
     <div className="text-center py-4">
       <div className="inline-flex items-center gap-2 bg-primary/10 px-3 py-1 rounded-full mb-3">
@@ -196,7 +199,7 @@ export function SimpleWelcomeMessage() {
         <span className="text-[10px] font-medium text-primary">Hosni IA</span>
       </div>
       <p className="text-sm text-muted-foreground">
-        Votre expert en marketing et commerce 24/7
+        {t('expertShort')}
       </p>
     </div>
   )
@@ -204,10 +207,12 @@ export function SimpleWelcomeMessage() {
 
 // Version avec statistiques
 export function WelcomeMessageWithStats() {
+  const { t } = useLanguage()
+  
   const stats = [
-    { value: "1000+", label: "Entreprises accompagnées" },
-    { value: "98%", label: "Satisfaction client" },
-    { value: "24/7", label: "Disponibilité" }
+    { value: "1000+", label: t('companiesAccompanied') },
+    { value: "98%", label: t('customerSatisfaction') },
+    { value: "24/7", label: t('availability') }
   ]
 
   return (
