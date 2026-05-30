@@ -1,10 +1,11 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Check, Zap, Loader2, Crown } from 'lucide-react'
 import { usePiPaymentSimple } from '@/hooks/use-pi-payment-simple'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 interface Plan {
   id: string
@@ -21,37 +22,54 @@ const PLANS: Plan[] = [
     id: 'pro_weekly',
     name: 'Pro',
     price: 5.99,
-    duration: '7 jours',
-    description: 'Parfait pour tester',
+    duration: '7days',
+    description: 'perfectForTest',
     features: [
-      'Analyses illimitées',
-      'Support par email',
-      'Export des rapports',
-      'Accès à la communauté'
+      'unlimitedQuestions',
+      'emailSupport',
+      'exportReports',
+      'communityAccess'
     ]
   },
   {
     id: 'premium_monthly',
     name: 'Premium',
     price: 19.99,
-    duration: '30 jours',
-    description: 'Notre meilleur plan',
+    duration: '30days',
+    description: 'bestPlan',
     features: [
-      'Tout ce qui est dans Pro',
-      'Support prioritaire 24/7',
-      'API personnalisée',
-      'Rapports avancés',
-      'Conseils personnalisés',
-      'Pas de publicités'
+      'allProFeatures',
+      'prioritySupport247',
+      'customApi',
+      'advancedReports',
+      'personalizedAdvice',
+      'noAds'
     ],
     popular: true
   }
 ]
 
 export function PiSubscriptionPlans() {
+  const { t } = useLanguage()
   const { initiatePayment, isProcessing, paymentStatus, resetStatus } = usePiPaymentSimple()
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null)
   const [localMessage, setLocalMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+
+  // Vérifier l'abonnement existant
+  useEffect(() => {
+    const saved = localStorage.getItem('hinos_subscription')
+    if (saved) {
+      try {
+        const sub = JSON.parse(saved)
+        if (sub.active && new Date(sub.expiresAt) > new Date()) {
+          const planName = sub.planId === 'pro_weekly' ? 'Pro' : 'Premium'
+          setLocalMessage({ type: 'success', text: t('subscriptionAlreadyActive').replace('{plan}', planName) })
+        }
+      } catch (e) {
+        console.error('Erreur:', e)
+      }
+    }
+  }, [t])
 
   const handleSubscribe = async (plan: Plan) => {
     setSelectedPlanId(plan.id)
@@ -62,32 +80,56 @@ export function PiSubscriptionPlans() {
       const result = await initiatePayment({
         amount: plan.price,
         planId: plan.id,
-        memo: `Abonnement ${plan.name} - ${plan.duration}`
+        memo: `${t('subscription')} ${plan.name} - ${t(plan.duration)}`
       })
 
       if (result.success && result.subscription) {
         localStorage.setItem('hinos_subscription', JSON.stringify(result.subscription))
-        setLocalMessage({ type: 'success', text: `✅ Abonnement ${plan.name} activé avec succès !` })
+        setLocalMessage({ type: 'success', text: t('subscriptionActivated').replace('{plan}', plan.name) })
         
         setTimeout(() => {
           window.location.reload()
         }, 2000)
       } else {
-        setLocalMessage({ type: 'error', text: result.error || '❌ Erreur lors du paiement' })
+        setLocalMessage({ type: 'error', text: result.error || t('paymentError') })
       }
     } catch (error: any) {
       console.error('Erreur:', error)
-      setLocalMessage({ type: 'error', text: '❌ Erreur inattendue. Veuillez réessayer.' })
+      setLocalMessage({ type: 'error', text: t('unexpectedError') })
     } finally {
       setSelectedPlanId(null)
     }
   }
 
+  const getFeatureText = (featureKey: string): string => {
+    const featureMap: Record<string, string> = {
+      unlimitedQuestions: t('unlimitedQuestions'),
+      emailSupport: t('emailSupport'),
+      exportReports: t('exportReports'),
+      communityAccess: t('communityAccess'),
+      allProFeatures: t('allProFeatures'),
+      prioritySupport247: t('prioritySupport247'),
+      customApi: t('customApi'),
+      advancedReports: t('advancedReports'),
+      personalizedAdvice: t('personalizedAdvice'),
+      noAds: t('noAds')
+    }
+    return featureMap[featureKey] || featureKey
+  }
+
+  const getPlanDescription = (descriptionKey: string): string => {
+    const descMap: Record<string, string> = {
+      perfectForTest: t('perfectForTest'),
+      bestPlan: t('bestPlan')
+    }
+    return descMap[descriptionKey] || descriptionKey
+  }
+
   return (
     <div className="space-y-6">
       <div className="text-center space-y-2">
-        <h2 className="text-3xl font-bold">Plans d&apos;abonnement</h2>
-        <p className="text-gray-600">Choisissez le plan qui vous convient le mieux</p>
+        <h2 className="text-3xl font-bold">{t('subscriptionPlans')}</h2>
+        <p className="text-gray-600">{t('choosePlan')}</p>
       </div>
 
       {paymentStatus && !localMessage && (
@@ -115,7 +157,7 @@ export function PiSubscriptionPlans() {
             {plan.popular && (
               <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10">
                 <span className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 py-1 rounded-full text-sm font-semibold shadow-lg">
-                  ⭐ Populaire
+                  ⭐ {t('popular')}
                 </span>
               </div>
             )}
@@ -128,7 +170,7 @@ export function PiSubscriptionPlans() {
                   <span className="text-xl">{plan.name}</span>
                   {plan.popular && <Zap className="w-5 h-5 text-yellow-500 fill-yellow-500" />}
                 </CardTitle>
-                <CardDescription>{plan.description}</CardDescription>
+                <CardDescription>{getPlanDescription(plan.description)}</CardDescription>
               </CardHeader>
 
               <CardContent className="space-y-6">
@@ -136,7 +178,7 @@ export function PiSubscriptionPlans() {
                   <div className="text-4xl font-bold text-gray-900">
                     {plan.price}π
                   </div>
-                  <p className="text-sm text-gray-600">pour {plan.duration}</p>
+                  <p className="text-sm text-gray-600">{t('for')} {t(plan.duration)}</p>
                 </div>
 
                 <Button
@@ -151,12 +193,12 @@ export function PiSubscriptionPlans() {
                   {selectedPlanId === plan.id && isProcessing ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                      Traitement...
+                      {t('processing')}...
                     </>
                   ) : (
                     <>
                       <Crown className="w-4 h-4 mr-2" />
-                      S&apos;abonner
+                      {t('subscribe')}
                     </>
                   )}
                 </Button>
@@ -165,7 +207,7 @@ export function PiSubscriptionPlans() {
                   {plan.features.map((feature, index) => (
                     <li key={index} className="flex items-start gap-3">
                       <Check className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                      <span className="text-sm text-gray-700">{feature}</span>
+                      <span className="text-sm text-gray-700">{getFeatureText(feature)}</span>
                     </li>
                   ))}
                 </ul>
