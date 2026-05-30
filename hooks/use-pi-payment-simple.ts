@@ -2,8 +2,8 @@
 
 import { useState, useCallback } from 'react'
 
-// 🔥 Désactiver la simulation pour les vrais paiements
-const SIMULATION_MODE = false;
+// 🔥 Mode simulation - Désactivé pour les vrais paiements
+const SIMULATION_MODE = false
 
 export function usePiPaymentSimple() {
   const [isProcessing, setIsProcessing] = useState(false)
@@ -21,7 +21,9 @@ export function usePiPaymentSimple() {
         throw new Error('Pi SDK non disponible. Veuillez utiliser le Pi Browser.')
       }
 
-      // 1. Créer le paiement avec Pi SDK
+      console.log('💰 Début du paiement réel pour:', config.planId)
+
+      // Créer le paiement avec Pi SDK
       const paymentPromise = new Promise((resolve, reject) => {
         window.Pi.createPayment(
           {
@@ -32,8 +34,8 @@ export function usePiPaymentSimple() {
           {
             // Phase I: Server-Side Approval
             onReadyForServerApproval: async (paymentId: string) => {
-              console.log("📝 Phase I - Approbation serveur:", paymentId)
-              setPaymentStatus('Approbation serveur...')
+              console.log("📝 Approbation serveur:", paymentId)
+              setPaymentStatus('Approbation en cours...')
               
               try {
                 const response = await fetch('/api/pi/payment', {
@@ -48,7 +50,7 @@ export function usePiPaymentSimple() {
                 if (!response.ok) {
                   throw new Error('Erreur approbation serveur')
                 }
-                console.log("✅ Phase I - Approuvé")
+                console.log("✅ Paiement approuvé")
               } catch (err) {
                 reject(err)
               }
@@ -56,8 +58,8 @@ export function usePiPaymentSimple() {
             
             // Phase III: Server-Side Completion
             onReadyForServerCompletion: async (paymentId: string, txid: string) => {
-              console.log("📝 Phase III - Finalisation:", paymentId, txid)
-              setPaymentStatus('Finalisation...')
+              console.log("📝 Finalisation:", paymentId, txid)
+              setPaymentStatus('Finalisation en cours...')
               
               try {
                 const response = await fetch('/api/pi/payment', {
@@ -74,10 +76,10 @@ export function usePiPaymentSimple() {
                 const data = await response.json()
                 if (data.success) {
                   localStorage.setItem('hinos_subscription', JSON.stringify(data.subscription))
-                  console.log("✅ Phase III - Complété")
+                  console.log("✅ Paiement complété avec succès")
                   resolve(data)
                 } else {
-                  reject(new Error(data.error))
+                  reject(new Error(data.error || 'Erreur finalisation'))
                 }
               } catch (err) {
                 reject(err)
@@ -86,11 +88,11 @@ export function usePiPaymentSimple() {
             
             onCancel: (paymentId: string) => {
               console.log("❌ Paiement annulé:", paymentId)
-              reject(new Error('Paiement annulé'))
+              reject(new Error('Paiement annulé par l\'utilisateur'))
             },
             
             onError: (error: Error) => {
-              console.error("❌ Erreur Pi:", error)
+              console.error("❌ Erreur Pi SDK:", error)
               reject(error)
             }
           }
@@ -98,17 +100,24 @@ export function usePiPaymentSimple() {
       })
 
       await paymentPromise
-      setPaymentStatus('✅ Abonnement activé !')
+      setPaymentStatus('✅ Abonnement activé avec succès !')
       return { success: true }
 
     } catch (err: any) {
       const errorMsg = err?.message || 'Erreur de paiement'
+      console.error('❌ Erreur:', errorMsg)
       setError(errorMsg)
-      setPaymentStatus('❌ ' + errorMsg)
+      setPaymentStatus(`❌ ${errorMsg}`)
       return { success: false, error: errorMsg }
     } finally {
       setIsProcessing(false)
     }
+  }, [])
+
+  const resetStatus = useCallback(() => {
+    setPaymentStatus('')
+    setError(null)
+    setIsProcessing(false)
   }, [])
 
   return {
@@ -116,6 +125,6 @@ export function usePiPaymentSimple() {
     isProcessing,
     paymentStatus,
     error,
-    resetStatus: () => {}
+    resetStatus
   }
 }
