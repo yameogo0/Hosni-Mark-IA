@@ -1,3 +1,6 @@
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 'use client'
 
 import type React from "react"
@@ -31,7 +34,6 @@ declare global {
   }
 }
 
-// Composant de chargement
 function LoadingSpinner() {
   return (
     <div className="flex items-center justify-center min-h-screen">
