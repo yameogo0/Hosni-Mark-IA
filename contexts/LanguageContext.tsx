@@ -1,4 +1,4 @@
-'use client';
+'use client'
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
@@ -10,235 +10,64 @@ interface LanguageContextType {
   t: (key: string) => string;
 }
 
-// Traductions complètes
+// Traductions simplifiées
 const translations = {
   fr: {
-    // Général
-    welcome: "Bienvenue",
-    settings: "Paramètres",
-    wallet: "Portefeuille",
-    subscription: "Abonnement",
-    diagnostic: "Diagnostic",
-    back: "Retour",
-    save: "Enregistrer",
-    cancel: "Annuler",
-    confirm: "Confirmer",
-    loading: "Chargement...",
-    error: "Une erreur est survenue",
-    success: "Succès",
-    yes: "Oui",
-    no: "Non",
-    close: "Fermer",
-    retry: "Réessayer",
-    connecting: "Connexion en cours...",
-    
-    // ChatBot
     expertTitle: "Expert en Marketing, Commerce & Stratégies de Croissance",
     askQuestion: "Posez votre question marketing...",
-    describeImage: "Décrivez ce que vous voulez analyser...",
-    imageReady: "Image prête à analyser",
     poweredBy: "Propulsé par Pi Network",
     securePayments: "Paiements sécurisés",
-    
-    // Abonnement
+    wallet: "Portefeuille",
+    diagnostic: "Diagnostic",
     subscriptionRequired: "Wallet requis",
-    connectWalletFirst: "Veuillez d'abord connecter votre wallet Pi dans les paramètres.",
+    connectWalletFirst: "Veuillez d'abord connecter votre wallet Pi",
     subscriptionActivated: "🎉 Abonnement activé!",
-    premiumAccess: "Vous avez maintenant accès à toutes les fonctionnalités premium.",
+    premiumAccess: "Accès premium activé",
     dailyLimitReached: "Limite quotidienne atteinte",
     questionsPerDay: "questions/jour",
     upgrade: "Passer au premium",
-    basic: "Gratuit",
-    pro: "Pro",
-    premium: "Premium",
-    days: "jours",
-    month: "mois",
-    subscribe: "S'abonner",
-    popular: "Populaire",
-    
-    // Plans
-    weeklyPlan: "Hebdomadaire",
-    monthlyPlan: "Mensuel",
-    unlimitedQuestions: "Questions illimitées",
-    imageAnalysis: "Recherche par image",
-    prioritySupport: "Support prioritaire",
-    advancedReports: "Rapports avancés",
-    apiAccess: "API accessible",
-    
-    // Wallet
-    balance: "Solde disponible",
-    address: "Adresse du Wallet",
-    userId: "ID Utilisateur",
-    status: "État",
-    connected: "Connecté",
-    disconnect: "Déconnecter",
-    connect: "Connecter",
-    refresh: "Actualiser",
-    copyAddress: "Copier l'adresse",
-    copied: "Copié !",
-    
-    // Pages
-    home: "Accueil",
-    chat: "Chat",
-    account: "Compte",
-    version: "Version",
-    
-    // Messages d'erreur
-    apiKeyMissing: "❌ Clé API manquante",
-    serviceUnavailable: "❌ Service indisponible",
-    networkError: "❌ Erreur de connexion"
+    connecting: "Connexion en cours...",
+    retry: "Réessayer",
+    imageReady: "Image prête",
+    describeImage: "Décrivez l'image"
   },
   en: {
-    // General
-    welcome: "Welcome",
-    settings: "Settings",
-    wallet: "Wallet",
-    subscription: "Subscription",
-    diagnostic: "Diagnostic",
-    back: "Back",
-    save: "Save",
-    cancel: "Cancel",
-    confirm: "Confirm",
-    loading: "Loading...",
-    error: "An error occurred",
-    success: "Success",
-    yes: "Yes",
-    no: "No",
-    close: "Close",
-    retry: "Retry",
-    connecting: "Connecting...",
-    
-    // ChatBot
     expertTitle: "Expert in Marketing, Commerce & Growth Strategies",
     askQuestion: "Ask your marketing question...",
-    describeImage: "Describe what you want to analyze...",
-    imageReady: "Image ready to analyze",
     poweredBy: "Powered by Pi Network",
     securePayments: "Secure payments",
-    
-    // Subscription
+    wallet: "Wallet",
+    diagnostic: "Diagnostic",
     subscriptionRequired: "Wallet required",
-    connectWalletFirst: "Please connect your Pi wallet in settings first.",
+    connectWalletFirst: "Please connect your Pi wallet first",
     subscriptionActivated: "🎉 Subscription activated!",
-    premiumAccess: "You now have access to all premium features.",
+    premiumAccess: "Premium access activated",
     dailyLimitReached: "Daily limit reached",
     questionsPerDay: "questions/day",
     upgrade: "Upgrade to premium",
-    basic: "Free",
-    pro: "Pro",
-    premium: "Premium",
-    days: "days",
-    month: "month",
-    subscribe: "Subscribe",
-    popular: "Popular",
-    
-    // Plans
-    weeklyPlan: "Weekly",
-    monthlyPlan: "Monthly",
-    unlimitedQuestions: "Unlimited questions",
-    imageAnalysis: "Image search",
-    prioritySupport: "Priority support",
-    advancedReports: "Advanced reports",
-    apiAccess: "API access",
-    
-    // Wallet
-    balance: "Available balance",
-    address: "Wallet Address",
-    userId: "User ID",
-    status: "Status",
-    connected: "Connected",
-    disconnect: "Disconnect",
-    connect: "Connect",
-    refresh: "Refresh",
-    copyAddress: "Copy address",
-    copied: "Copied!",
-    
-    // Pages
-    home: "Home",
-    chat: "Chat",
-    account: "Account",
-    version: "Version",
-    
-    // Error messages
-    apiKeyMissing: "❌ API key missing",
-    serviceUnavailable: "❌ Service unavailable",
-    networkError: "❌ Connection error"
+    connecting: "Connecting...",
+    retry: "Retry",
+    imageReady: "Image ready",
+    describeImage: "Describe the image"
   },
   pt: {
-    // Geral
-    welcome: "Bem-vindo",
-    settings: "Configurações",
-    wallet: "Carteira",
-    subscription: "Assinatura",
-    diagnostic: "Diagnóstico",
-    back: "Voltar",
-    save: "Salvar",
-    cancel: "Cancelar",
-    confirm: "Confirmar",
-    loading: "Carregando...",
-    error: "Ocorreu um erro",
-    success: "Sucesso",
-    yes: "Sim",
-    no: "Não",
-    close: "Fechar",
-    retry: "Tentar novamente",
-    connecting: "Conectando...",
-    
-    // ChatBot
-    expertTitle: "Especialista em Marketing, Comércio & Estratégias de Crescimento",
+    expertTitle: "Especialista em Marketing, Comércio & Estratégias",
     askQuestion: "Faça sua pergunta de marketing...",
-    describeImage: "Descreva o que você quer analisar...",
-    imageReady: "Imagem pronta para análise",
     poweredBy: "Desenvolvido por Pi Network",
     securePayments: "Pagamentos seguros",
-    
-    // Assinatura
+    wallet: "Carteira",
+    diagnostic: "Diagnóstico",
     subscriptionRequired: "Carteira necessária",
-    connectWalletFirst: "Conecte sua carteira Pi nas configurações primeiro.",
+    connectWalletFirst: "Conecte sua carteira Pi primeiro",
     subscriptionActivated: "🎉 Assinatura ativada!",
-    premiumAccess: "Agora você tem acesso a todos os recursos premium.",
+    premiumAccess: "Acesso premium ativado",
     dailyLimitReached: "Limite diário atingido",
     questionsPerDay: "perguntas/dia",
     upgrade: "Assinar premium",
-    basic: "Grátis",
-    pro: "Pro",
-    premium: "Premium",
-    days: "dias",
-    month: "mês",
-    subscribe: "Assinar",
-    popular: "Popular",
-    
-    // Planos
-    weeklyPlan: "Semanal",
-    monthlyPlan: "Mensal",
-    unlimitedQuestions: "Perguntas ilimitadas",
-    imageAnalysis: "Pesquisa por imagem",
-    prioritySupport: "Suporte prioritário",
-    advancedReports: "Relatórios avançados",
-    apiAccess: "Acesso à API",
-    
-    // Carteira
-    balance: "Saldo disponível",
-    address: "Endereço da Carteira",
-    userId: "ID do Usuário",
-    status: "Estado",
-    connected: "Conectado",
-    disconnect: "Desconectar",
-    connect: "Conectar",
-    refresh: "Atualizar",
-    copyAddress: "Copiar endereço",
-    copied: "Copiado!",
-    
-    // Páginas
-    home: "Início",
-    chat: "Chat",
-    account: "Conta",
-    version: "Versão",
-    
-    // Mensagens de erro
-    apiKeyMissing: "❌ Chave de API ausente",
-    serviceUnavailable: "❌ Serviço indisponível",
-    networkError: "❌ Erro de conexão"
+    connecting: "Conectando...",
+    retry: "Tentar novamente",
+    imageReady: "Imagem pronta",
+    describeImage: "Descreva a imagem"
   }
 };
 
@@ -275,7 +104,11 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 export function useLanguage() {
   const context = useContext(LanguageContext);
   if (!context) {
-    throw new Error('useLanguage must be used within a LanguageProvider');
+    return {
+      language: 'fr' as Language,
+      setLanguage: () => {},
+      t: (key: string) => key
+    };
   }
   return context;
 }
