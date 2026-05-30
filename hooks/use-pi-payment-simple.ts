@@ -45,7 +45,7 @@ export function usePiPaymentSimple() {
         }
       }
 
-      // 🔥 MODE RÉEL - (désactivé car SIMULATION_MODE = true)
+      // 🔥 MODE RÉEL - Uniquement si SIMULATION_MODE = false
       if (typeof window === 'undefined' || !window.Pi) {
         throw new Error('Pi SDK non disponible. Veuillez utiliser le Pi Browser.')
       }
