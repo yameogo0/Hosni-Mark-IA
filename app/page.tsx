@@ -31,6 +31,7 @@ declare global {
   }
 }
 
+// Composant de chargement
 function LoadingSpinner() {
   return (
     <div className="flex items-center justify-center min-h-screen">
