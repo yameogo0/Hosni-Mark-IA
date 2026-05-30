@@ -9,6 +9,7 @@ import { Loader2, Crown, Zap, CheckCircle2, AlertCircle, CreditCard, Shield, Clo
 import { usePiPayment, type SubscriptionPlan } from "@/hooks/use-pi-payment"
 import { useState, useEffect, useCallback } from "react"
 import { COLORS } from "@/lib/app-config"
+import { useLanguage } from "@/contexts/LanguageContext"
 
 interface PaymentModalProps {
   isOpen: boolean
@@ -18,6 +19,7 @@ interface PaymentModalProps {
 }
 
 export function PaymentModal({ isOpen, onClose, accessToken, onPaymentSuccess }: PaymentModalProps) {
+  const { t } = useLanguage()
   const { initiatePayment, isProcessing, paymentError, clearError, plans } = usePiPayment(accessToken)
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan | null>(null)
   const [showSuccess, setShowSuccess] = useState(false)
@@ -90,12 +92,12 @@ export function PaymentModal({ isOpen, onClose, accessToken, onPaymentSuccess }:
               <CheckCircle2 className="w-8 h-8 text-green-600" />
             </div>
             <div className="text-center space-y-2">
-              <h3 className="text-lg font-semibold text-green-700">Paiement Réussi !</h3>
+              <h3 className="text-lg font-semibold text-green-700">{t('paymentSuccess')}</h3>
               <p className="text-sm text-muted-foreground">
-                Votre abonnement a été activé avec succès.
+                {t('subscriptionActivatedDesc')}
               </p>
               <p className="text-xs text-muted-foreground">
-                Vous allez être redirigé dans quelques secondes...
+                {t('redirecting')}
               </p>
             </div>
           </div>
@@ -109,35 +111,35 @@ export function PaymentModal({ isOpen, onClose, accessToken, onPaymentSuccess }:
       <Dialog open={isOpen} onOpenChange={handleClose}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Confirmation de paiement</DialogTitle>
+            <DialogTitle>{t('confirmPayment')}</DialogTitle>
             <DialogDescription>
-              Vérifiez les détails de votre abonnement avant de confirmer.
+              {t('confirmPaymentDesc')}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
             <div className="bg-muted/30 rounded-lg p-4 space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Plan</span>
+                <span className="text-sm text-muted-foreground">{t('plan')}</span>
                 <span className="font-semibold">{confirmedPlan.name}</span>
               </div>
               <Separator />
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Prix</span>
+                <span className="text-sm text-muted-foreground">{t('price')}</span>
                 <span className="text-xl font-bold" style={{ color: COLORS.PRIMARY }}>
                   {formatPrice(confirmedPlan.amount)} π
                 </span>
               </div>
               <Separator />
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Durée</span>
-                <span>{confirmedPlan.duration === "weekly" ? "7 jours" : "30 jours"}</span>
+                <span className="text-sm text-muted-foreground">{t('duration')}</span>
+                <span>{confirmedPlan.duration === "weekly" ? t('7days') : t('30days')}</span>
               </div>
             </div>
 
             <div className="flex items-center gap-2 justify-center text-xs text-muted-foreground">
               <Shield className="w-3 h-3" />
-              <span>Paiement sécurisé via Pi Network</span>
+              <span>{t('securePayment')}</span>
             </div>
           </div>
 
@@ -151,7 +153,7 @@ export function PaymentModal({ isOpen, onClose, accessToken, onPaymentSuccess }:
               className="flex-1"
               disabled={isProcessing}
             >
-              Annuler
+              {t('cancel')}
             </Button>
             <Button
               onClick={handleConfirmPayment}
@@ -162,12 +164,12 @@ export function PaymentModal({ isOpen, onClose, accessToken, onPaymentSuccess }:
               {isProcessing ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Traitement...
+                  {t('processing')}
                 </>
               ) : (
                 <>
                   <CreditCard className="w-4 h-4 mr-2" />
-                  Confirmer
+                  {t('confirm')}
                 </>
               )}
             </Button>
@@ -183,10 +185,10 @@ export function PaymentModal({ isOpen, onClose, accessToken, onPaymentSuccess }:
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Crown className="w-5 h-5 text-primary" />
-            Choisissez Votre Abonnement Premium
+            {t('choosePremium')}
           </DialogTitle>
           <DialogDescription>
-            Débloquez toutes les fonctionnalités de Hosni IA avec un paiement sécurisé Pi Network
+            {t('unlockFeatures')}
           </DialogDescription>
         </DialogHeader>
 
@@ -214,7 +216,7 @@ export function PaymentModal({ isOpen, onClose, accessToken, onPaymentSuccess }:
                     className="absolute -top-2 left-4 text-xs px-2 py-0.5"
                     style={{ backgroundColor: COLORS.PRIMARY }}
                   >
-                    ⭐ Populaire
+                    ⭐ {t('popular')}
                   </Badge>
                 )}
 
@@ -230,12 +232,12 @@ export function PaymentModal({ isOpen, onClose, accessToken, onPaymentSuccess }:
                     </div>
                     {plan.duration === "weekly" && (
                       <Badge variant="outline" className="text-xs">
-                        7 jours
+                        {t('7days')}
                       </Badge>
                     )}
                     {plan.duration === "monthly" && (
                       <Badge variant="outline" className="text-xs">
-                        30 jours
+                        {t('30days')}
                       </Badge>
                     )}
                   </div>
@@ -249,7 +251,7 @@ export function PaymentModal({ isOpen, onClose, accessToken, onPaymentSuccess }:
                       {formatPrice(plan.amount)} π
                     </span>
                     <span className="text-sm text-muted-foreground">
-                      / {plan.duration === "weekly" ? "semaine" : "mois"}
+                      / {plan.duration === "weekly" ? t('perWeek') : t('perMonth')}
                     </span>
                   </div>
 
@@ -262,7 +264,7 @@ export function PaymentModal({ isOpen, onClose, accessToken, onPaymentSuccess }:
                     ))}
                     {plan.features.length > 4 && (
                       <li className="text-xs text-muted-foreground pl-6">
-                        +{plan.features.length - 4} autres avantages
+                        +{plan.features.length - 4} {t('moreBenefits')}
                       </li>
                     )}
                   </ul>
@@ -279,10 +281,10 @@ export function PaymentModal({ isOpen, onClose, accessToken, onPaymentSuccess }:
                     {isProcessing && selectedPlan?.id === plan.id ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Traitement en cours...
+                        {t('processing')}...
                       </>
                     ) : (
-                      <>Souscrire maintenant</>
+                      <>{t('subscribeNow')}</>
                     )}
                   </Button>
                 </div>
@@ -296,17 +298,17 @@ export function PaymentModal({ isOpen, onClose, accessToken, onPaymentSuccess }:
             <div className="w-4 h-4 rounded-full bg-primary/20 flex items-center justify-center">
               <span className="text-[8px] font-bold" style={{ color: COLORS.PRIMARY }}>π</span>
             </div>
-            <span>Paiement sécurisé et décentralisé</span>
+            <span>{t('secureDecentralized')}</span>
           </div>
           <Separator orientation="vertical" className="h-4" />
           <div className="flex items-center gap-1">
             <Clock className="w-3 h-3" />
-            <span>Accès immédiat</span>
+            <span>{t('immediateAccess')}</span>
           </div>
           <Separator orientation="vertical" className="h-4" />
           <div className="flex items-center gap-1">
             <Shield className="w-3 h-3" />
-            <span>Sans engagement</span>
+            <span>{t('noCommitment')}</span>
           </div>
         </div>
       </DialogContent>
