@@ -17,8 +17,16 @@ const WELCOME_MESSAGES = {
   pt: "Olá! Eu sou Hosni IA, seu assistente inteligente especializado em marketing, comércio e estratégias de crescimento.\n\nPergunte-me sobre:\n• Estratégia de marca\n• Marketing digital\n• Vendas e CRM\n• Análise de dados"
 }
 
-// 🔥 MODE DÉMO DÉSACTIVÉ - Pour les vrais paiements
-const DEMO_MODE = false
+// 🔥 Mode démo - Activer pour les tests sans Pi Browser
+const DEMO_MODE = true
+
+// Détection du Pi Browser
+const isPiBrowser = (): boolean => {
+  if (typeof window === 'undefined') return false
+  const userAgent = navigator.userAgent.toLowerCase()
+  // Vérifier si l'agent utilisateur contient 'pi' ou 'pibrowser'
+  return userAgent.includes('pi') || userAgent.includes('pibrowser') || !!window.Pi
+}
 
 export const useChatbot = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -41,14 +49,45 @@ export const useChatbot = () => {
     return 'fr'
   }, [])
 
-  // Authentification réelle (pas de mode démo)
+  // Authentification
   useEffect(() => {
     const authenticate = async () => {
-      try {
+      // Mode démo - authentification automatique
+      if (DEMO_MODE) {
+        console.log("🏖️ Mode démo - Authentification automatique")
+        setTimeout(() => {
+          setPiAccessToken("demo_token_" + Date.now())
+          setIsAuthenticated(true)
+          setAuthMessage("✅ Connecté (mode démo)")
+        }, 500)
+        return
+      }
+
+      // Mode réel - vérifier Pi Browser
+      if (!isPiBrowser()) {
+        setAuthMessage("Veuillez utiliser le Pi Browser")
+        setError("Pi Browser requis")
+        setIsAuthenticated(false)
+        return
+      }
+
+      // Attendre que le SDK Pi soit chargé
+      let attempts = 0
+      const maxAttempts = 20
+      
+      const checkPi = () => {
         if (typeof window !== 'undefined' && window.Pi) {
-          setAuthMessage("Authentification Pi...")
+          return true
+        }
+        return false
+      }
+      
+      const initAuth = async () => {
+        try {
+          setAuthMessage("Initialisation Pi SDK...")
           await window.Pi.init({ version: "2.0", sandbox: false })
           
+          setAuthMessage("Authentification...")
           const auth = await window.Pi.authenticate(
             ['username', 'wallet_address', 'payments'],
             (payment: any) => console.log('Paiement incomplet:', payment)
@@ -58,14 +97,32 @@ export const useChatbot = () => {
             setPiAccessToken(auth.accessToken)
             setIsAuthenticated(true)
             setAuthMessage(`✅ Connecté: ${auth.user?.username}`)
+          } else {
+            throw new Error("Authentification échouée")
           }
-        } else {
-          setAuthMessage("Veuillez utiliser le Pi Browser")
+        } catch (err) {
+          console.error(err)
+          setError("Erreur de connexion")
+          setAuthMessage("❌ Échec de connexion")
+          setIsAuthenticated(false)
         }
-      } catch (err) {
-        console.error(err)
-        setError("Erreur de connexion")
-        setAuthMessage("❌ Échec de connexion")
+      }
+      
+      if (checkPi()) {
+        initAuth()
+      } else {
+        const waitForPi = setInterval(() => {
+          attempts++
+          if (checkPi()) {
+            clearInterval(waitForPi)
+            initAuth()
+          } else if (attempts >= maxAttempts) {
+            clearInterval(waitForPi)
+            setAuthMessage("SDK Pi non disponible")
+            setError("Pi SDK non chargé après 10 secondes")
+            setIsAuthenticated(false)
+          }
+        }, 500)
       }
     }
     
@@ -114,6 +171,7 @@ export const useChatbot = () => {
     const userLanguage = detectLanguage(input)
     setCurrentLanguage(userLanguage)
 
+    // Mettre à jour le message d'accueil si c'est le premier message
     if (messages.length === 1 && messages[0].id === '1') {
       setMessages([{ id: '1', text: WELCOME_MESSAGES[userLanguage], sender: 'ai', timestamp: new Date() }])
     }
@@ -145,7 +203,7 @@ export const useChatbot = () => {
 
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
-        text: data.response || "❌ Désolé, une erreur s'est produite.",
+        text: data.response || "❌ Désolé, une erreur s'est produite. Veuillez réessayer.",
         sender: 'ai',
         timestamp: new Date()
       }
