@@ -7,6 +7,7 @@ import { Sparkles, ImageIcon, Infinity, Crown, Shield, Zap, MessageCircle, Check
 import { Separator } from "@/components/ui/separator"
 import { COLORS } from "@/lib/app-config"
 import { useState, useEffect } from "react"
+import { useLanguage } from "@/contexts/LanguageContext"
 
 interface SubscriptionBannerProps {
   onSubscribeClick?: () => void
@@ -15,6 +16,7 @@ interface SubscriptionBannerProps {
 }
 
 export function SubscriptionBanner({ onSubscribeClick, currentPlan, daysLeft }: SubscriptionBannerProps) {
+  const { t } = useLanguage()
   const [savedPlan, setSavedPlan] = useState<"free" | "weekly" | "monthly" | null>(null)
   const [savedDaysLeft, setSavedDaysLeft] = useState<number | null>(null)
 
@@ -42,36 +44,36 @@ export function SubscriptionBanner({ onSubscribeClick, currentPlan, daysLeft }: 
   const plans = [
     {
       id: "free",
-      name: "Gratuit",
+      name: t('free'),
       price: 0,
-      period: "toujours",
+      period: t('always'),
       features: [
-        { text: "10 questions par jour", icon: <MessageCircle className="w-3 h-3" /> },
-        { text: "Accès aux réponses générales", icon: <Sparkles className="w-3 h-3" /> }
+        { text: t('freeQuestions'), icon: <MessageCircle className="w-3 h-3" /> },
+        { text: t('freeAccess'), icon: <Sparkles className="w-3 h-3" /> }
       ],
       icon: <MessageCircle className="w-4 h-4 text-muted-foreground" />
     },
     {
       id: "weekly",
-      name: "Hebdomadaire",
+      name: t('weeklyPlan'),
       price: 5,
-      period: "semaine",
+      period: t('week'),
       features: [
-        { text: "Questions illimitées", icon: <Infinity className="w-3 h-3" /> },
-        { text: "Recherche par image", icon: <ImageIcon className="w-3 h-3" /> },
-        { text: "Pas de restriction quotidienne", icon: <Zap className="w-3 h-3" /> }
+        { text: t('unlimitedQuestions'), icon: <Infinity className="w-3 h-3" /> },
+        { text: t('imageAnalysis'), icon: <ImageIcon className="w-3 h-3" /> },
+        { text: t('noDailyRestriction'), icon: <Zap className="w-3 h-3" /> }
       ],
       icon: <Zap className="w-4 h-4 text-primary" />
     },
     {
       id: "monthly",
-      name: "Mensuel Pro",
+      name: t('monthlyPro'),
       price: 15,
-      period: "mois",
+      period: t('month'),
       features: [
-        { text: "Tous les avantages hebdomadaires", icon: <CheckCircle2 className="w-3 h-3" /> },
-        { text: "Analyses approfondies", icon: <TrendingUp className="w-3 h-3" /> },
-        { text: "Support prioritaire", icon: <Shield className="w-3 h-3" /> }
+        { text: t('allWeeklyBenefits'), icon: <CheckCircle2 className="w-3 h-3" /> },
+        { text: t('advancedAnalysis'), icon: <TrendingUp className="w-3 h-3" /> },
+        { text: t('prioritySupport'), icon: <Shield className="w-3 h-3" /> }
       ],
       icon: <Crown className="w-4 h-4 text-primary" />
     }
@@ -83,9 +85,9 @@ export function SubscriptionBanner({ onSubscribeClick, currentPlan, daysLeft }: 
         <CardTitle className="flex items-center gap-2 text-base">
           <Sparkles className="w-5 h-5 text-primary" />
           {activePlan && activePlan !== "free" ? (
-            <span>🎉 Votre abonnement {activePlan === "weekly" ? "Hebdomadaire" : "Pro"} est actif !</span>
+            <span>{t('subscriptionActive').replace('{plan}', activePlan === "weekly" ? t('weeklyPlan') : t('monthlyPro'))}</span>
           ) : (
-            "Abonnez-vous et Débloquez la Puissance Totale"
+            t('unlockPower')
           )}
         </CardTitle>
       </CardHeader>
@@ -96,16 +98,16 @@ export function SubscriptionBanner({ onSubscribeClick, currentPlan, daysLeft }: 
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 <Crown className="w-4 h-4 text-green-600" />
-                <h4 className="font-semibold text-sm text-green-800">Abonnement actif</h4>
+                <h4 className="font-semibold text-sm text-green-800">{t('activeSubscription')}</h4>
               </div>
               <Badge className="bg-green-600 text-white text-xs">
-                {activePlan === "weekly" ? "Hebdomadaire" : "Mensuel Pro"}
+                {activePlan === "weekly" ? t('weeklyPlan') : t('monthlyPro')}
               </Badge>
             </div>
             {activeDaysLeft !== null && activeDaysLeft > 0 && (
               <div className="flex items-center gap-2 text-xs text-green-700">
                 <Clock className="w-3 h-3" />
-                <span>{activeDaysLeft} jour{activeDaysLeft > 1 ? 's' : ''} restant{activeDaysLeft > 1 ? 's' : ''}</span>
+                <span>{t('daysRemaining').replace('{days}', activeDaysLeft.toString())}</span>
               </div>
             )}
           </div>
@@ -132,9 +134,7 @@ export function SubscriptionBanner({ onSubscribeClick, currentPlan, daysLeft }: 
                     </Badge>
                   </div>
                   <p className="text-xs text-muted-foreground mb-2 italic">
-                    {plan.id === "weekly" 
-                      ? "Idéal pour tester ou résoudre un défi à court terme"
-                      : "Pour une croissance continue – Économisez plus!"}
+                    {plan.id === "weekly" ? t('weeklyDescription') : t('monthlyDescription')}
                   </p>
                   <ul className="space-y-1 text-xs">
                     {plan.features.map((feature, idx) => (
@@ -154,10 +154,10 @@ export function SubscriptionBanner({ onSubscribeClick, currentPlan, daysLeft }: 
             <div className="bg-background/60 rounded-lg p-3 border border-primary/30">
               <div className="flex items-center gap-2 mb-2">
                 <Wallet className="w-4 h-4 text-primary" />
-                <h5 className="font-semibold text-sm">Paiement Pi Network</h5>
+                <h5 className="font-semibold text-sm">{t('piPayment')}</h5>
               </div>
               <p className="text-xs text-muted-foreground leading-relaxed mb-3">
-                Finance décentralisée et sécurisée. Abonnez-vous en quelques clics avec votre portefeuille Pi, sans intermédiaire.
+                {t('piPaymentDescription')}
               </p>
               
               {onSubscribeClick && (
@@ -167,7 +167,7 @@ export function SubscriptionBanner({ onSubscribeClick, currentPlan, daysLeft }: 
                   onClick={onSubscribeClick}
                 >
                   <Crown className="w-4 h-4 mr-2" />
-                  S&apos;abonner maintenant
+                  {t('subscribeNow')}
                 </Button>
               )}
             </div>
@@ -176,14 +176,14 @@ export function SubscriptionBanner({ onSubscribeClick, currentPlan, daysLeft }: 
           // Si déjà abonné, afficher un message
           <div className="bg-primary/10 rounded-lg p-4 text-center">
             <Crown className="w-8 h-8 text-primary mx-auto mb-2" />
-            <p className="text-sm font-medium text-primary">Vous avez déjà accès à toutes les fonctionnalités premium !</p>
-            <p className="text-xs text-muted-foreground mt-1">Profitez pleinement de Hosni IA</p>
+            <p className="text-sm font-medium text-primary">{t('alreadyPremium')}</p>
+            <p className="text-xs text-muted-foreground mt-1">{t('enjoyFeatures')}</p>
             <Button
               variant="outline"
               className="mt-3"
               onClick={() => window.location.href = "/"}
             >
-              Retour au chat
+              {t('backToChat')}
             </Button>
           </div>
         )}
